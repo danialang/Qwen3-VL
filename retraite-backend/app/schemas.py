@@ -62,4 +62,32 @@ class ReservationOut(BaseModel):
     is_internal: bool
     user_id: int
     security_code: str | None = None
+    payment_method: str | None = None
+    payment_reference: str | None = None
+    paid_at: datetime | None = None
+    has_receipt: bool = False
     created_at: datetime
+
+
+class AvailabilityOut(BaseModel):
+    room: RoomType
+    event_date: date
+    start_time: time
+    end_time: time
+    is_internal: bool
+    status: ReservationStatus
+
+
+PAYMENT_METHODS = ("paysika_orange_money", "paysika_mtn_momo", "paypal_sandbox")
+
+
+class PaymentCreate(BaseModel):
+    method: str
+    reference: str
+
+    @field_validator("method")
+    @classmethod
+    def check_method(cls, v):
+        if v not in PAYMENT_METHODS:
+            raise ValueError(f"Méthode de paiement invalide. Attendu : {', '.join(PAYMENT_METHODS)}.")
+        return v

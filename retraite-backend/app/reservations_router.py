@@ -1,5 +1,5 @@
 import secrets
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
@@ -8,9 +8,9 @@ from sqlalchemy.orm import Session
 
 from .config import settings
 from .database import get_db
-from .models import Receipt, Reservation, ReservationStatus, SecurityCode, User, UserRole
+from .models import Receipt, Reservation, ReservationStatus, RoomType, SecurityCode, User, UserRole
 from .receipts import generate_receipt_pdf
-from .schemas import ReservationCreate, ReservationOut
+from .schemas import AvailabilityOut, PaymentCreate, ReservationCreate, ReservationOut
 from .security import get_current_user, require_roles
 
 router = APIRouter(prefix="/reservations", tags=["reservations"])
@@ -56,6 +56,10 @@ def _to_out(r: Reservation) -> ReservationOut:
         is_internal=r.is_internal,
         user_id=r.user_id,
         security_code=r.security_code.code if r.security_code else None,
+        payment_method=r.payment_method,
+        payment_reference=r.payment_reference,
+        paid_at=r.paid_at,
+        has_receipt=r.receipt is not None,
         created_at=r.created_at,
     )
 
@@ -124,9 +128,43 @@ def list_reservations(db: Session = Depends(get_db), current_user: User = Depend
     return [_to_out(r) for r in query.order_by(Reservation.event_date.desc()).all()]
 
 
+@router.get("/availability", response_model=list[AvailabilityOut])
+def get_availability(
+    room: RoomType | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Créneaux occupés (sans données personnelles) pour construire le calendrier client."""
+    query = db.query(Reservation).filter(Reservation.status != ReservationStatus.cancelled)
+    if room:
+        query = query.filter(Reservation.room == room)
+    return query.order_by(Reservation.event_date).all()
+
+
 @router.get("/{reservation_id}", response_model=ReservationOut)
 def get_reservation(reservation_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return _to_out(_get_owned_reservation(db, reservation_id, current_user))
+
+
+@router.post("/{reservation_id}/pay", response_model=ReservationOut)
+def pay_reservation(
+    reservation_id: int,
+    payload: PaymentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    r = _get_owned_reservation(db, reservation_id, current_user)
+    if r.is_internal:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Réservation interne au Collège : aucun paiement requis.")
+    if r.status == ReservationStatus.cancelled:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Réservation annulée.")
+
+    r.payment_method = payload.method
+    r.payment_reference = payload.reference
+    r.paid_at = datetime.utcnow()
+    db.commit()
+    db.refresh(r)
+    return _to_out(r)
 
 
 @router.post("/{reservation_id}/validate", response_model=ReservationOut)

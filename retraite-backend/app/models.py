@@ -62,6 +62,9 @@ class Reservation(Base):
     amount = Column(Numeric(12, 2), default=0, nullable=False)
     is_internal = Column(Boolean, default=False, nullable=False)
     accepted_rules = Column(Boolean, default=False, nullable=False)
+    payment_method = Column(String(50), nullable=True)
+    payment_reference = Column(String(255), nullable=True)
+    paid_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="reservations")
