@@ -1,47 +1,19 @@
-import secrets
-from datetime import datetime, timedelta
+import logging
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
-from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
-from .config import settings
 from .database import get_db
-from .models import Receipt, Reservation, ReservationStatus, RoomType, SecurityCode, User, UserRole
+from .models import Receipt, Reservation, ReservationStatus, RoomType, User, UserRole
 from .receipts import generate_receipt_pdf
+from .reservation_logic import ReservationConflictError, create_reservation as create_reservation_record
 from .schemas import AvailabilityOut, PaymentCreate, ReservationCreate, ReservationOut
 from .security import get_current_user, require_roles
 
 router = APIRouter(prefix="/reservations", tags=["reservations"])
-
-SUGGESTION_WINDOW_DAYS = 30
-
-
-def _overlap_filter(room, event_date, start_time, end_time):
-    return and_(
-        Reservation.room == room,
-        Reservation.event_date == event_date,
-        Reservation.status != ReservationStatus.cancelled,
-        Reservation.start_time < end_time,
-        Reservation.end_time > start_time,
-    )
-
-
-def _find_conflict(db: Session, room, event_date, start_time, end_time):
-    return db.query(Reservation).filter(_overlap_filter(room, event_date, start_time, end_time)).first()
-
-
-def _suggest_next_available(db: Session, room, start_time, end_time, from_date):
-    for offset in range(1, SUGGESTION_WINDOW_DAYS + 1):
-        candidate = from_date + timedelta(days=offset)
-        if not _find_conflict(db, room, candidate, start_time, end_time):
-            return candidate
-    return None
-
-
-def _generate_security_code() -> str:
-    return secrets.token_hex(4).upper()
+logger = logging.getLogger("retraite.reservations")
 
 
 def _to_out(r: Reservation) -> ReservationOut:
@@ -80,43 +52,21 @@ def create_reservation(
     if not payload.accepted_rules:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Vous devez accepter le règlement intérieur.")
 
-    is_internal = current_user.role in (UserRole.admin, UserRole.dev)
+    try:
+        reservation = create_reservation_record(
+            db, current_user, payload.room, payload.event_date, payload.start_time, payload.end_time
+        )
+    except ReservationConflictError as e:
+        logger.info(
+            "Conflit de réservation refusé pour user_id=%s room=%s date=%s : %s",
+            current_user.id, payload.room.value, payload.event_date, e.message,
+        )
+        raise HTTPException(status.HTTP_409_CONFLICT, e.message)
 
-    conflict = _find_conflict(db, payload.room, payload.event_date, payload.start_time, payload.end_time)
-    if conflict:
-        suggestion = _suggest_next_available(db, payload.room, payload.start_time, payload.end_time, payload.event_date)
-        reason = "un événement du Collège" if conflict.is_internal else "une autre réservation"
-        detail = f"Créneau indisponible ({reason})."
-        if suggestion:
-            detail += f" Prochaine date disponible : {suggestion.isoformat()}."
-        raise HTTPException(status.HTTP_409_CONFLICT, detail)
-
-    reservation = Reservation(
-        user_id=current_user.id,
-        room=payload.room,
-        event_date=payload.event_date,
-        start_time=payload.start_time,
-        end_time=payload.end_time,
-        accepted_rules=True,
-        is_internal=is_internal,
-        amount=0 if is_internal else settings.RESERVATION_AMOUNT,
-        status=ReservationStatus.validated if is_internal else ReservationStatus.pending,
+    logger.info(
+        "Réservation #%s créée par user_id=%s room=%s date=%s statut=%s",
+        reservation.id, current_user.id, reservation.room.value, reservation.event_date, reservation.status.value,
     )
-    db.add(reservation)
-    db.commit()
-    db.refresh(reservation)
-
-    code = SecurityCode(reservation_id=reservation.id, code=_generate_security_code())
-    db.add(code)
-    db.commit()
-    db.refresh(reservation)
-
-    if reservation.status == ReservationStatus.validated:
-        pdf_path = generate_receipt_pdf(reservation, code.code, current_user)
-        db.add(Receipt(reservation_id=reservation.id, pdf_path=pdf_path))
-        db.commit()
-        db.refresh(reservation)
-
     return _to_out(reservation)
 
 
@@ -164,6 +114,7 @@ def pay_reservation(
     r.paid_at = datetime.utcnow()
     db.commit()
     db.refresh(r)
+    logger.info("Paiement test enregistré pour réservation #%s méthode=%s", r.id, payload.method)
     return _to_out(r)
 
 
@@ -188,6 +139,7 @@ def validate_reservation(
         db.commit()
 
     db.refresh(r)
+    logger.info("Réservation #%s validée par admin_id=%s", r.id, current_user.id)
     return _to_out(r)
 
 
@@ -197,6 +149,7 @@ def cancel_reservation(reservation_id: int, db: Session = Depends(get_db), curre
     r.status = ReservationStatus.cancelled
     db.commit()
     db.refresh(r)
+    logger.info("Réservation #%s annulée par user_id=%s", r.id, current_user.id)
     return _to_out(r)
 
 

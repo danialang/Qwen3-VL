@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
+import '../assistant/chat_screen.dart';
 import 'admin_reservations_screen.dart';
 import 'admin_users_screen.dart';
 
@@ -32,6 +33,21 @@ class AdminDashboardScreen extends StatelessWidget {
             icon: Icons.receipt_long,
             label: 'Reçus\n(via une réservation validée)',
             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminReservationsScreen())),
+          ),
+          _DashboardTile(
+            icon: Icons.smart_toy,
+            label: 'Assistant IA\nadmin',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const ChatScreen(
+                  title: 'Assistant admin',
+                  path: '/assistant/admin',
+                  welcomeMessage:
+                      'Posez une question sur les réservations (ex. "combien ce mois-ci ?"), '
+                      'demandez le bilan annuel, ou consultez les derniers logs applicatifs.',
+                ),
+              ),
+            ),
           ),
         ],
       ),

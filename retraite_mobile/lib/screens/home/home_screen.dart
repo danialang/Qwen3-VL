@@ -5,6 +5,7 @@ import '../../core/session.dart';
 import '../../core/theme_provider.dart';
 import '../../widgets/college_logo.dart';
 import '../admin/admin_dashboard_screen.dart';
+import '../assistant/chat_screen.dart';
 import '../auth/login_screen.dart';
 import '../reservations/my_reservations_screen.dart';
 import '../rooms/room_selection_screen.dart';
@@ -65,6 +66,23 @@ class HomeScreen extends StatelessWidget {
             title: 'Mes réservations',
             subtitle: 'Historique et statuts',
             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MyReservationsScreen())),
+          ),
+          const SizedBox(height: 12),
+          _ActionCard(
+            icon: Icons.smart_toy,
+            title: 'Assistant IA',
+            subtitle: 'Réservez en langage naturel',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const ChatScreen(
+                  title: 'Assistant de réservation',
+                  path: '/assistant/client',
+                  welcomeMessage:
+                      'Bonjour ! Dites-moi quelle salle, quelle date et quel horaire vous souhaitez, '
+                      "et je m'occupe de vérifier la disponibilité et créer votre réservation.",
+                ),
+              ),
+            ),
           ),
           if (user?.isAdminOrDev == true) ...[
             const SizedBox(height: 12),

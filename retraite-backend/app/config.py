@@ -12,11 +12,15 @@ class Settings:
     ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "120"))
     RESERVATION_AMOUNT = int(os.getenv("RESERVATION_AMOUNT", "5000000"))
     RECEIPTS_DIR = os.getenv("RECEIPTS_DIR", "receipts")
+    LOG_DIR = os.getenv("LOG_DIR", "logs")
 
     DEV_EMAIL = os.getenv("DEV_EMAIL")
     DEV_PASSWORD = os.getenv("DEV_PASSWORD")
     ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "ecoretraite@gmail.com")
     ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+
+    ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+    ASSISTANT_MODEL = os.getenv("ASSISTANT_MODEL", "claude-opus-5")
 
 
 settings = Settings()
