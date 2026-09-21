@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme.dart';
 import '../models/reservation.dart';
 
 class StatusBadge extends StatelessWidget {
@@ -11,9 +12,8 @@ class StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        // ignore: deprecated_member_use
         color: status.color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
         border: Border.all(color: status.color),
       ),
       child: Row(

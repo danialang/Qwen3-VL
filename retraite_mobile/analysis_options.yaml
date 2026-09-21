@@ -2,6 +2,10 @@ analyzer:
   exclude:
     - build/**
     - android/**
+  errors:
+    # withOpacity() is used deliberately for compatibility with older Flutter SDKs
+    # (withValues() requires a very recent SDK not guaranteed on every dev machine).
+    deprecated_member_use: ignore
 include: package:flutter_lints/flutter.yaml
 
 linter:
