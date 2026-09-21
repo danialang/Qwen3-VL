@@ -7,6 +7,8 @@ extension RoomApi on Room {
 
   String get label => this == Room.gymnase ? 'Gymnase' : 'Salle des fêtes';
 
+  String get imageAsset => this == Room.gymnase ? 'assets/images/gymnase.jpg' : 'assets/images/salle_fetes.jpg';
+
   static Room fromApi(String value) => value == 'gymnase' ? Room.gymnase : Room.salleFetes;
 }
 

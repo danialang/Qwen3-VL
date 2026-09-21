@@ -35,34 +35,60 @@ class _RoomCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: ExpansionTile(
-        leading: CircleAvatar(backgroundColor: CollegeColors.greenLight, child: Icon(icon, color: CollegeColors.green)),
-        title: Text(room.label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        subtitle: const Text('Voir le matériel disponible'),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      margin: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ...equipments.map(
-            (e) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  const Icon(Icons.check_circle, size: 18, color: CollegeColors.green),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(e)),
-                ],
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: Image.asset(
+              room.imageAsset,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [CollegeColors.green, CollegeColors.greenDark],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Icon(icon, color: Colors.white, size: 48),
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.arrow_forward),
-              label: const Text('Réserver cette salle'),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => RulesScreen(room: room)),
+          ExpansionTile(
+            shape: const RoundedRectangleBorder(side: BorderSide.none),
+            collapsedShape: const RoundedRectangleBorder(side: BorderSide.none),
+            leading: CircleAvatar(backgroundColor: CollegeColors.greenLight, child: Icon(icon, color: CollegeColors.green)),
+            title: Text(room.label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            subtitle: const Text('Voir le matériel disponible'),
+            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            children: [
+              ...equipments.map(
+                (e) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle, size: 18, color: CollegeColors.green),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(e)),
+                    ],
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.arrow_forward),
+                  label: const Text('Réserver cette salle'),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => RulesScreen(room: room)),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
