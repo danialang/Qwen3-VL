@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
 
-/// Emplacement pour le logo/les photos du Collège.
-///
-/// Aucune image officielle n'a encore été fournie : ce widget affiche un
-/// repli (icône + initiales) et charge `assets/images/logo.png` s'il existe.
-/// Une fois les visuels du Collège reçus, les déposer dans
-/// `assets/images/` (logo.png, accueil.jpg, ...) sans autre changement de code.
+/// Logo officiel du Collège (`assets/images/logo.png`), avec un repli
+/// (icône + initiales) si l'image venait à manquer. Les photos de l'accueil
+/// (`assets/images/accueil.jpg`) restent à fournir séparément.
 class CollegeLogo extends StatelessWidget {
   final double size;
   const CollegeLogo({super.key, this.size = 72});
