@@ -3,6 +3,7 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from .admin_router import router as admin_stats_router
 from .assistant.admin_router import router as assistant_admin_router
 from .assistant.client_router import router as assistant_client_router
 from .auth_router import router as auth_router
@@ -34,6 +35,7 @@ app.include_router(auth_router)
 app.include_router(reservations_router)
 app.include_router(assistant_client_router)
 app.include_router(assistant_admin_router)
+app.include_router(admin_stats_router)
 
 
 @app.get("/health")

@@ -91,3 +91,12 @@ class PaymentCreate(BaseModel):
         if v not in PAYMENT_METHODS:
             raise ValueError(f"Méthode de paiement invalide. Attendu : {', '.join(PAYMENT_METHODS)}.")
         return v
+
+
+class AdminOverviewOut(BaseModel):
+    year: int
+    month: int
+    reservations_this_month: int
+    revenue_this_month_fcfa: float
+    pending_reservations_count: int
+    occupancy_rate_this_month_percent: dict[str, float]

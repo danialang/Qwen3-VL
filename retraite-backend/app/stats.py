@@ -1,3 +1,4 @@
+import calendar
 from datetime import datetime
 
 from sqlalchemy import extract
@@ -64,4 +65,41 @@ def annual_report(db: Session, year: int) -> dict:
         "external_reservations_count": len(reservations) - internal_count,
         "total_revenue_fcfa": revenue,
         "occupancy_rate_percent": occupancy_rate_percent,
+    }
+
+
+def monthly_overview(db: Session, now: datetime | None = None) -> dict:
+    """Chiffres clés du mois en cours, pour les cartes de statistiques du tableau de bord admin."""
+    now = now or datetime.utcnow()
+    year, month = now.year, now.month
+
+    reservations = (
+        db.query(Reservation)
+        .filter(
+            extract("year", Reservation.event_date) == year,
+            extract("month", Reservation.event_date) == month,
+        )
+        .all()
+    )
+
+    revenue = sum(float(r.amount) for r in reservations if r.status == ReservationStatus.validated)
+    days_booked: dict[str, set] = {room.value: set() for room in RoomType}
+    for r in reservations:
+        if r.status != ReservationStatus.cancelled:
+            days_booked[r.room.value].add(r.event_date)
+
+    days_in_month = calendar.monthrange(year, month)[1]
+    occupancy_rate_percent = {
+        room: round(len(days) / days_in_month * 100, 1) for room, days in days_booked.items()
+    }
+
+    pending_count = db.query(Reservation).filter(Reservation.status == ReservationStatus.pending).count()
+
+    return {
+        "year": year,
+        "month": month,
+        "reservations_this_month": len(reservations),
+        "revenue_this_month_fcfa": revenue,
+        "pending_reservations_count": pending_count,
+        "occupancy_rate_this_month_percent": occupancy_rate_percent,
     }
