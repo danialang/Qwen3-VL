@@ -5,8 +5,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _database_url() -> str:
+    # Les hébergeurs (Railway...) fournissent "mysql://..." ; SQLAlchemy a besoin du pilote pymysql.
+    url = os.getenv("DATABASE_URL") or os.getenv("MYSQL_URL") or "mysql+pymysql://root:@127.0.0.1:3306/retraite_db"
+    if url.startswith("mysql://"):
+        url = "mysql+pymysql://" + url[len("mysql://"):]
+    return url
+
+
 class Settings:
-    DATABASE_URL = os.getenv("DATABASE_URL", "mysql+pymysql://root:@127.0.0.1:3306/retraite_db")
+    DATABASE_URL = _database_url()
     SECRET_KEY = os.getenv("SECRET_KEY", "change-me")
     ALGORITHM = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "120"))

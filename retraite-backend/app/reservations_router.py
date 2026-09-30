@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -158,4 +159,8 @@ def download_receipt(reservation_id: int, db: Session = Depends(get_db), current
     r = _get_owned_reservation(db, reservation_id, current_user)
     if not r.receipt:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Reçu non disponible.")
+    if not os.path.exists(r.receipt.pdf_path):
+        # Le disque de l'hébergeur est temporaire : on refabrique le PDF s'il a disparu.
+        r.receipt.pdf_path = generate_receipt_pdf(r, r.security_code.code, r.user)
+        db.commit()
     return FileResponse(r.receipt.pdf_path, media_type="application/pdf", filename=f"recu_{r.id}.pdf")
