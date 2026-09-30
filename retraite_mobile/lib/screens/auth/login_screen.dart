@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
+import '../../core/server_address.dart';
 import '../../core/session.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/college_logo.dart';
@@ -40,10 +41,51 @@ class _LoginScreenState extends State<LoginScreen> {
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } catch (_) {
-      setState(() => _error = 'Impossible de contacter le serveur. Vérifiez votre connexion.');
+      setState(() => _error =
+          "Impossible de contacter le serveur. Vérifiez le Wi-Fi et l'adresse du serveur (bouton en bas de l'écran).");
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _editServerAddress() async {
+    final api = context.read<SessionProvider>().api;
+    final controller = TextEditingController(text: api.baseUrl);
+    final entered = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Adresse du serveur'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Adresse de l'ordinateur où tourne le serveur, sur le même Wi-Fi. Exemple : 192.168.1.20:8000",
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.url,
+              autocorrect: false,
+              decoration: const InputDecoration(labelText: 'Adresse'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Annuler')),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(controller.text),
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+    if (entered == null) return;
+    final address = normalizeServerAddress(entered);
+    api.baseUrl = address;
+    await saveServerAddress(address);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Serveur : $address')));
   }
 
   @override
@@ -104,6 +146,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextButton(
                     onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterScreen())),
                     child: const Text('Pas encore de compte ? Inscrivez-vous'),
+                  ),
+                  TextButton.icon(
+                    onPressed: _editServerAddress,
+                    icon: const Icon(Icons.settings_ethernet),
+                    label: const Text('Adresse du serveur'),
                   ),
                 ],
               ),

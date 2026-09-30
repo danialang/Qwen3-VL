@@ -127,6 +127,22 @@ Si vous ne voulez pas garder VS Code/le câble branchés en permanence :
 
 ---
 
+## 6 bis. Sans câble et sans rien installer sur le PC : APK construit par GitHub
+
+Le fichier `.github/workflows/build-android-apk.yml` fait construire l'APK par GitHub
+(onglet **Actions** du dépôt) à chaque modification du dossier `retraite_mobile`.
+
+1. Sur GitHub : **Actions → Build Android APK →** dernière exécution verte → section
+   **Artifacts** → télécharger **`retraite-apk`** (un `.zip` contenant `app-release.apk`).
+2. Sur la tablette/le téléphone Android : télécharger le zip, l'ouvrir, appuyer sur
+   `app-release.apk`, autoriser « Installer des applications inconnues » si demandé.
+3. Le PC (serveur lancé avec `--host 0.0.0.0`) et la tablette doivent être sur le **même Wi-Fi**.
+   Autoriser le port 8000 dans le pare-feu Windows si besoin.
+4. Dans l'application, écran de connexion → **Adresse du serveur** → saisir l'IP du PC,
+   par exemple `192.168.1.20:8000` (IP obtenue avec `ipconfig`, ligne « Adresse IPv4 »).
+
+---
+
 ## 7. Comptes de test
 
 - **Admin Collège** : email `ADMIN_EMAIL` défini dans `.env` du backend (par défaut

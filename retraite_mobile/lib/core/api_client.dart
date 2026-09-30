@@ -18,7 +18,7 @@ class ApiException implements Exception {
 /// transforme les réponses d'erreur en [ApiException] avec le message
 /// renvoyé par le backend (`detail`).
 class ApiClient {
-  final String baseUrl;
+  String baseUrl;
   String? _token;
 
   ApiClient({this.baseUrl = kApiBaseUrl});

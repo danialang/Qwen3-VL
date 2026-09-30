@@ -5,21 +5,25 @@ import 'core/api_client.dart';
 import 'core/constants.dart';
 import 'core/session.dart';
 import 'core/theme.dart';
+import 'core/server_address.dart';
 import 'core/theme_provider.dart';
 import 'screens/splash_screen.dart';
 
-void main() {
-  runApp(const RetraiteApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final apiBaseUrl = await loadServerAddress();
+  runApp(RetraiteApp(initialApiBaseUrl: apiBaseUrl));
 }
 
 class RetraiteApp extends StatelessWidget {
-  const RetraiteApp({super.key});
+  final String? initialApiBaseUrl;
+  const RetraiteApp({super.key, this.initialApiBaseUrl});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        Provider<ApiClient>(create: (_) => ApiClient()),
+        Provider<ApiClient>(create: (_) => ApiClient(baseUrl: initialApiBaseUrl ?? kApiBaseUrl)),
         ChangeNotifierProvider<SessionProvider>(
           create: (context) => SessionProvider(context.read<ApiClient>()),
         ),
