@@ -20,7 +20,7 @@ class Settings:
     ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
     ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-    ASSISTANT_MODEL = os.getenv("ASSISTANT_MODEL", "claude-opus-5")
+    ASSISTANT_MODEL = os.getenv("ASSISTANT_MODEL", "claude-sonnet-5-5")
 
 
 settings = Settings()
