@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
+import '../../core/format.dart';
 import '../../core/session.dart';
 import '../../core/theme.dart';
 import '../../services/admin_stats_service.dart';
 import '../assistant/chat_screen.dart';
 import 'admin_reservations_screen.dart';
 import 'admin_users_screen.dart';
+import 'admin_year_report_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -46,14 +48,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
-  String _formatFcfa(double amount) {
-    final s = amount.toStringAsFixed(0);
-    final buffer = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buffer.write(' ');
-      buffer.write(s[i]);
-    }
-    return '$buffer FCFA';
+  void _openYearReport(AdminOverview overview) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => AdminYearReportScreen(overview: overview)));
   }
 
   @override
@@ -81,7 +77,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 child: Text(_error!, style: const TextStyle(color: Colors.red)),
               )
             else if (_overview != null)
-              _StatsGrid(overview: _overview!, formatFcfa: _formatFcfa),
+              _StatsGrid(overview: _overview!, onYearTap: () => _openYearReport(_overview!)),
             const SizedBox(height: 24),
             Text('Gestion', style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 12),
@@ -136,9 +132,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
 class _StatsGrid extends StatelessWidget {
   final AdminOverview overview;
-  final String Function(double) formatFcfa;
+  final VoidCallback onYearTap;
 
-  const _StatsGrid({required this.overview, required this.formatFcfa});
+  const _StatsGrid({required this.overview, required this.onYearTap});
 
   @override
   Widget build(BuildContext context) {
@@ -163,6 +159,19 @@ class _StatsGrid extends StatelessWidget {
           color: CollegeColors.green,
         ),
         _StatCard(
+          icon: Icons.event_available,
+          label: 'Revenus à venir\n(mois suivants)',
+          value: formatFcfa(overview.revenueUpcomingFcfa),
+          color: CollegeColors.greenDark,
+        ),
+        _StatCard(
+          icon: Icons.bar_chart,
+          label: 'Revenus ${overview.year}\n(voir le détail)',
+          value: formatFcfa(overview.revenueYearFcfa),
+          color: CollegeColors.gold,
+          onTap: onYearTap,
+        ),
+        _StatCard(
           icon: Icons.sports_basketball,
           label: 'Occupation Gymnase',
           value: '${overview.occupancyRateThisMonthPercent['gymnase']?.toStringAsFixed(0) ?? '0'} %',
@@ -184,32 +193,37 @@ class _StatCard extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
+  final VoidCallback? onTap;
 
-  const _StatCard({required this.icon, required this.label, required this.value, required this.color});
+  const _StatCard({required this.icon, required this.label, required this.value, required this.color, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Icon(icon, color: color, size: 22),
-            Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              label,
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Icon(icon, color: color, size: 22),
+              Text(
+                value,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                label,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ),
     );

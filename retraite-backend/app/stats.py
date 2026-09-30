@@ -1,5 +1,5 @@
 import calendar
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import extract
 from sqlalchemy.orm import Session
@@ -73,22 +73,30 @@ def monthly_overview(db: Session, now: datetime | None = None) -> dict:
     now = now or datetime.utcnow()
     year, month = now.year, now.month
 
-    reservations = (
+    year_reservations = db.query(Reservation).filter(extract("year", Reservation.event_date) == year).all()
+    reservations = [r for r in year_reservations if r.event_date.month == month]
+
+    # Revenus : uniquement les réservations validées (l'argent est compté après validation).
+    revenue = sum(float(r.amount) for r in reservations if r.status == ReservationStatus.validated)
+    revenue_by_month = [0.0] * 12
+    for r in year_reservations:
+        if r.status == ReservationStatus.validated:
+            revenue_by_month[r.event_date.month - 1] += float(r.amount)
+
+    days_in_month = calendar.monthrange(year, month)[1]
+    end_of_month = date(year, month, days_in_month)
+    upcoming = (
         db.query(Reservation)
-        .filter(
-            extract("year", Reservation.event_date) == year,
-            extract("month", Reservation.event_date) == month,
-        )
+        .filter(Reservation.status == ReservationStatus.validated, Reservation.event_date > end_of_month)
         .all()
     )
+    revenue_upcoming = sum(float(r.amount) for r in upcoming)
 
-    revenue = sum(float(r.amount) for r in reservations if r.status == ReservationStatus.validated)
     days_booked: dict[str, set] = {room.value: set() for room in RoomType}
     for r in reservations:
         if r.status != ReservationStatus.cancelled:
             days_booked[r.room.value].add(r.event_date)
 
-    days_in_month = calendar.monthrange(year, month)[1]
     occupancy_rate_percent = {
         room: round(len(days) / days_in_month * 100, 1) for room, days in days_booked.items()
     }
@@ -100,6 +108,9 @@ def monthly_overview(db: Session, now: datetime | None = None) -> dict:
         "month": month,
         "reservations_this_month": len(reservations),
         "revenue_this_month_fcfa": revenue,
+        "revenue_upcoming_fcfa": revenue_upcoming,
+        "revenue_year_fcfa": sum(revenue_by_month),
+        "revenue_by_month": revenue_by_month,
         "pending_reservations_count": pending_count,
         "occupancy_rate_this_month_percent": occupancy_rate_percent,
     }

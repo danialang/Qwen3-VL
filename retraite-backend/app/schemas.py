@@ -98,5 +98,8 @@ class AdminOverviewOut(BaseModel):
     month: int
     reservations_this_month: int
     revenue_this_month_fcfa: float
+    revenue_upcoming_fcfa: float
+    revenue_year_fcfa: float
+    revenue_by_month: list[float]
     pending_reservations_count: int
     occupancy_rate_this_month_percent: dict[str, float]
