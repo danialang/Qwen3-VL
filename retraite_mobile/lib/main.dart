@@ -36,6 +36,11 @@ class RetraiteApp extends StatelessWidget {
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
           themeMode: themeProvider.mode,
+          // Heures toujours en format 24 h (14:00), jamais en AM/PM, quel que soit le réglage de la tablette.
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+            child: child!,
+          ),
           home: const SplashScreen(),
         ),
       ),
