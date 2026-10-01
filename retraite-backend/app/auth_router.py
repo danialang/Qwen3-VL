@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from .database import get_db
 from .models import User, UserRole
-from .schemas import LoginRequest, Token, UserCreate, UserOut
+from .schemas import LoginRequest, PasswordChange, Token, UserCreate, UserOut
 from .security import (
     create_access_token,
     get_current_user,
@@ -50,6 +50,25 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     logger.info("Connexion réussie : user_id=%s role=%s", user.id, user.role.value)
     token = create_access_token({"sub": str(user.id), "role": user.role.value})
     return Token(access_token=token)
+
+
+@router.post("/change-password")
+def change_password(
+    payload: PasswordChange,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not verify_password(payload.current_password, current_user.password_hash):
+        logger.warning("Changement de mot de passe refusé (ancien mot de passe faux) : user_id=%s", current_user.id)
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Le mot de passe actuel est incorrect.")
+    validate_password_strength(payload.new_password)
+    if payload.new_password == payload.current_password:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Le nouveau mot de passe doit être différent de l'ancien.")
+
+    current_user.password_hash = hash_password(payload.new_password)
+    db.commit()
+    logger.info("Mot de passe modifié : user_id=%s", current_user.id)
+    return {"detail": "Mot de passe modifié."}
 
 
 @router.get("/me", response_model=UserOut)

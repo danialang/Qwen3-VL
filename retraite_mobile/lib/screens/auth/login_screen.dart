@@ -6,6 +6,7 @@ import '../../core/server_address.dart';
 import '../../core/session.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/college_logo.dart';
+import '../../widgets/password_field.dart';
 import '../home/home_screen.dart';
 import 'register_screen.dart';
 
@@ -122,10 +123,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     validator: (v) => (v == null || !v.contains('@')) ? 'Email invalide' : null,
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
+                  PasswordField(
                     controller: _passwordCtrl,
-                    obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Mot de passe', prefixIcon: Icon(Icons.lock_outline)),
+                    label: 'Mot de passe',
                     validator: (v) => (v == null || v.isEmpty) ? 'Mot de passe requis' : null,
                   ),
                   if (_error != null) ...[

@@ -25,6 +25,13 @@ class AuthService {
     return json['access_token'] as String;
   }
 
+  Future<void> changePassword({required String currentPassword, required String newPassword}) async {
+    await api.post('/auth/change-password', body: {
+      'current_password': currentPassword,
+      'new_password': newPassword,
+    });
+  }
+
   Future<AppUser> me() async {
     final json = await api.get('/auth/me');
     return AppUser.fromJson(json as Map<String, dynamic>);

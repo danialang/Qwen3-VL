@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../core/session.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/password_field.dart';
 import '../home/home_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -98,14 +99,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   decoration: const InputDecoration(labelText: 'Téléphone'),
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
+                PasswordField(
                   controller: _passwordCtrl,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Mot de passe *',
-                    helperText: '8 caractères min., une majuscule, un chiffre, un caractère spécial',
-                    helperMaxLines: 2,
-                  ),
+                  label: 'Mot de passe *',
+                  helperText: '8 caractères min., une majuscule, un chiffre, un caractère spécial',
                   validator: (v) => (v == null || !_strongPasswordRegex.hasMatch(v))
                       ? 'Mot de passe trop faible'
                       : null,

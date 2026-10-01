@@ -7,6 +7,7 @@ import '../../widgets/college_logo.dart';
 import '../admin/admin_dashboard_screen.dart';
 import '../assistant/chat_screen.dart';
 import '../auth/login_screen.dart';
+import '../profile/change_password_screen.dart';
 import '../reservations/my_reservations_screen.dart';
 import '../rooms/room_selection_screen.dart';
 
@@ -83,6 +84,13 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
             ),
+          ),
+          const SizedBox(height: 12),
+          _ActionCard(
+            icon: Icons.lock_reset,
+            title: 'Changer mon mot de passe',
+            subtitle: 'Modifier le mot de passe de mon compte',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChangePasswordScreen())),
           ),
           if (user?.isAdminOrDev == true) ...[
             const SizedBox(height: 12),
