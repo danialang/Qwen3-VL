@@ -5,6 +5,7 @@ import secrets
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .config import settings
@@ -28,22 +29,30 @@ from .security import (
     validate_password_strength,
     verify_password,
 )
+from .validators import validate_email_provider, validate_full_name
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = logging.getLogger("retraite.auth")
 
 
+def _find_user(db: Session, email: str) -> User | None:
+    """Recherche par email sans tenir compte des majuscules (les claviers en ajoutent souvent)."""
+    return db.query(User).filter(func.lower(User.email) == email.strip().lower()).first()
+
+
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register(payload: UserCreate, db: Session = Depends(get_db)):
-    if db.query(User).filter(User.email == payload.email).first():
+    validate_full_name(payload.full_name)
+    validate_email_provider(payload.email)
+    if _find_user(db, payload.email):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Un compte existe déjà avec cet email.")
 
     validate_password_strength(payload.password)
 
     user = User(
-        email=payload.email,
+        email=payload.email.strip().lower(),
         password_hash=hash_password(payload.password),
-        full_name=payload.full_name,
+        full_name=payload.full_name.strip(),
         phone=payload.phone,
         role=UserRole.client,
     )
@@ -56,7 +65,7 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=Token)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == payload.email).first()
+    user = _find_user(db, payload.email)
     if not user or not verify_password(payload.password, user.password_hash):
         logger.warning("Échec de connexion pour email=%s", payload.email)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Email ou mot de passe incorrect.")
@@ -79,7 +88,7 @@ def _hash_reset_code(user_id: int, code: str) -> str:
 @router.post("/forgot-password")
 def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
     # Même réponse que le compte existe ou non : on ne révèle jamais quels emails sont inscrits.
-    user = db.query(User).filter(User.email == payload.email).first()
+    user = _find_user(db, payload.email)
     if not user:
         logger.warning("Mot de passe oublié demandé pour un email inconnu : %s", payload.email)
         return FORGOT_PASSWORD_ANSWER
@@ -117,7 +126,7 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
 @router.post("/reset-password")
 def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)):
     invalid = HTTPException(status.HTTP_400_BAD_REQUEST, "Code invalide ou expiré.")
-    user = db.query(User).filter(User.email == payload.email).first()
+    user = _find_user(db, payload.email)
     if not user:
         raise invalid
 

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
 import '../../core/session.dart';
+import '../../core/validators.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/password_field.dart';
 import '../home/home_screen.dart';
@@ -20,6 +21,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _confirmCtrl = TextEditingController();
   bool _loading = false;
   String? _error;
 
@@ -66,6 +68,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _passwordCtrl.dispose();
+    _confirmCtrl.dispose();
     super.dispose();
   }
 
@@ -83,14 +86,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 TextFormField(
                   controller: _fullNameCtrl,
                   decoration: const InputDecoration(labelText: 'Nom complet *'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Champ obligatoire' : null,
+                  validator: validateFullName,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(labelText: 'Email *'),
-                  validator: (v) => (v == null || !v.contains('@')) ? 'Email invalide' : null,
+                  validator: validateEmailAddress,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -106,6 +109,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   validator: (v) => (v == null || !_strongPasswordRegex.hasMatch(v))
                       ? 'Mot de passe trop faible'
                       : null,
+                ),
+                const SizedBox(height: 16),
+                PasswordField(
+                  controller: _confirmCtrl,
+                  label: 'Confirmer le mot de passe *',
+                  validator: (v) => v != _passwordCtrl.text ? 'Les deux mots de passe sont différents' : null,
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 12),
