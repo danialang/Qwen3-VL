@@ -27,6 +27,11 @@ class Settings:
     ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "ecoretraite@gmail.com")
     ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
+    # Adresse publique du serveur : elle est écrite dans le QR code des reçus.
+    PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://127.0.0.1:8000")
+    # Lien de téléchargement de l'appli (Play Store) : si rempli, un 2e QR code apparaît sur le reçu.
+    APP_DOWNLOAD_URL = os.getenv("APP_DOWNLOAD_URL", "")
+
     ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
     ASSISTANT_MODEL = os.getenv("ASSISTANT_MODEL", "claude-sonnet-5-5")
 

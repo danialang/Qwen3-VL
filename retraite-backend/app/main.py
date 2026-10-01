@@ -11,6 +11,7 @@ from .database import Base, engine
 from .logging_config import setup_logging
 from .reservations_router import router as reservations_router
 from .seed import seed_initial_users
+from .verify_router import router as verify_router
 
 setup_logging()
 logger = logging.getLogger("retraite.main")
@@ -36,6 +37,7 @@ app.include_router(reservations_router)
 app.include_router(assistant_client_router)
 app.include_router(assistant_admin_router)
 app.include_router(admin_stats_router)
+app.include_router(verify_router)
 
 
 @app.get("/health")
