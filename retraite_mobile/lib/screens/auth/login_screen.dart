@@ -8,6 +8,7 @@ import '../../services/auth_service.dart';
 import '../../widgets/college_logo.dart';
 import '../../widgets/password_field.dart';
 import '../home/home_screen.dart';
+import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -127,6 +128,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _passwordCtrl,
                     label: 'Mot de passe',
                     validator: (v) => (v == null || v.isEmpty) ? 'Mot de passe requis' : null,
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => ForgotPasswordScreen(initialEmail: _emailCtrl.text.trim())),
+                      ),
+                      child: const Text('Mot de passe oublié ?'),
+                    ),
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 12),

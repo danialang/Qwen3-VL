@@ -92,3 +92,17 @@ class Receipt(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     reservation = relationship("Reservation", back_populates="receipt")
+
+
+class PasswordReset(Base):
+    """Code à 6 chiffres envoyé par email pour réinitialiser un mot de passe (stocké haché)."""
+
+    __tablename__ = "password_resets"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    code_hash = Column(String(64), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    attempts = Column(Integer, default=0, nullable=False)
+    used = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)

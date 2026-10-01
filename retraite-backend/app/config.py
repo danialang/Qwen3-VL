@@ -32,6 +32,16 @@ class Settings:
     # Lien de téléchargement de l'appli (Play Store) : si rempli, un 2e QR code apparaît sur le reçu.
     APP_DOWNLOAD_URL = os.getenv("APP_DOWNLOAD_URL", "")
 
+    # Envoi d'emails (code "mot de passe oublié"). Gmail : smtp.gmail.com, port 587, mot de passe d'application.
+    SMTP_HOST = os.getenv("SMTP_HOST", "")
+    SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USER = os.getenv("SMTP_USER", "")
+    SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+    SMTP_FROM = os.getenv("SMTP_FROM", "")
+    SMTP_STARTTLS = os.getenv("SMTP_STARTTLS", "true").lower() == "true"
+    # DÉVELOPPEMENT UNIQUEMENT : écrit le code dans les logs du serveur quand aucun email ne peut partir.
+    RESET_CODE_IN_LOGS = os.getenv("RESET_CODE_IN_LOGS", "false").lower() == "true"
+
     ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
     ASSISTANT_MODEL = os.getenv("ASSISTANT_MODEL", "claude-sonnet-5-5")
 
