@@ -4,7 +4,7 @@ Utilisation :  python generer_diagrammes.py        -> crée les fichiers .png da
 """
 import os
 
-from dessin import (BLACK, LINE, WHITE, Canvas, associate, associate_side, class_box, component, elbow, link_uc, node3d, sequence, state, usecase)
+from dessin import (BLACK, LINE, WHITE, Canvas, associate, associate_side, class_box, action, comm_messages, comm_object, component, decision, elbow, final_node, initial_node, link_uc, node3d, sequence, state, usecase)
 
 ICI = os.path.dirname(os.path.abspath(__file__))
 
@@ -336,6 +336,154 @@ def etats():
     cv.save(out("09_diagramme_etats_reservation.png"))
 
 
+# ============================================================ 10. DIAGRAMME D'ACTIVITÉ (couloirs)
+def activite():
+    Y = 0.86                       # compression verticale
+    cv = Canvas(1440, 1490)
+    X1, X2, X3 = 440, 1000, 1440   # fin des couloirs : Client | Système | Administrateur
+    top = 56
+    for x0, x1, name in [(0, X1, "Client"), (X1, X2, "Système"), (X2, X3, "Administrateur")]:
+        cv.rect(x0, 8, x1 - x0, 40, shadow=False)
+        cv.text((x0 + x1) / 2, 28, name, size=13, bold=True, anchor="mm")
+        cv.d.rectangle([cv.p(x0), cv.p(top - 8), cv.p(x1), cv.p(1480)], outline=LINE, width=cv.p(1))
+    def y(v): return v * Y
+    C, M, SD, A = 240, 600, 860, 1220          # axes : client, système (flux), système (branches), administrateur
+
+    ini = initial_node(cv, C, y(110))
+    a1 = action(cv, C, y(190), "S'authentifier")
+    a2 = action(cv, M, y(290), "Vérifier les identifiants")
+    d1 = decision(cv, M, y(400), "Identifiants\nvalides ?")
+    a3 = action(cv, SD, y(400), "Afficher l'erreur\nde connexion", w=200)
+    f1 = final_node(cv, SD, y(500))
+    a4 = action(cv, C, y(520), "Choisir la salle, la date\net l'horaire")
+    a5 = action(cv, C, y(610), "Accepter le règlement\nintérieur")
+    a6 = action(cv, M, y(700), "Vérifier la disponibilité\ndu créneau")
+    d2 = decision(cv, M, y(805), "Créneau\nlibre ?")
+    a7 = action(cv, SD, y(805), "Refuser et proposer la\nprochaine date disponible", w=210)
+    a8 = action(cv, M, y(920), "Enregistrer la réservation (en attente)\net générer le code de sécurité", w=250)
+    a9 = action(cv, C, y(1020), "Payer la réservation\n(moyen de paiement + référence)", w=250)
+    a10 = action(cv, M, y(1120), "Enregistrer le paiement")
+    a11 = action(cv, A, y(1210), "Examiner la demande\nde réservation")
+    d3 = decision(cv, A, y(1320), "Réservation\nvalidée ?")
+    a12 = action(cv, SD, y(1320), "Annuler la réservation", w=200)
+    f2 = final_node(cv, SD, y(1385))
+    a13 = action(cv, M, y(1500), "Passer la réservation\nà l'état « Validée »")
+    a14 = action(cv, M, y(1590), "Générer le reçu PDF\n(code de sécurité + QR code)", w=240)
+    a15 = action(cv, C, y(1680), "Télécharger le reçu", w=200)
+    f3 = final_node(cv, M, y(1680))
+
+    elbow(cv, [(C, ini["b"]), (C, a1["t"])])
+    elbow(cv, [(a1["r"], a1["cy"]), (M, a1["cy"]), (M, a2["t"])])
+    elbow(cv, [(M, a2["b"]), (M, d1["t"])])
+    elbow(cv, [(d1["r"], d1["cy"]), (a3["l"], a3["cy"])], "[non]", 732, d1["cy"] - 26)
+    elbow(cv, [(SD, a3["b"]), (SD, f1["t"])])
+    elbow(cv, [(M, d1["b"]), (M, y(460)), (C, y(460)), (C, a4["t"])], "[oui]", 520, y(460) - 18)
+    elbow(cv, [(C, a4["b"]), (C, a5["t"])])
+    elbow(cv, [(a5["r"], a5["cy"]), (M, a5["cy"]), (M, a6["t"])])
+    elbow(cv, [(M, a6["b"]), (M, d2["t"])])
+    elbow(cv, [(d2["r"], d2["cy"]), (a7["l"], a7["cy"])], "[occupé]", 732, d2["cy"] - 26)
+    elbow(cv, [(SD, a7["t"]), (SD, y(560)), (a4["r"] + 10, y(560)), (a4["r"] + 10, a4["cy"]), (a4["r"], a4["cy"])])
+    elbow(cv, [(M, d2["b"]), (M, a8["t"])], "[libre]", 650, d2["b"] + 8)
+    elbow(cv, [(a8["l"], a8["cy"]), (C, a8["cy"]), (C, a9["t"])])
+    elbow(cv, [(C, a9["b"]), (C, a10["cy"]), (a10["l"], a10["cy"])])
+    elbow(cv, [(a10["r"], a10["cy"]), (A, a10["cy"]), (A, a11["t"])])
+    elbow(cv, [(A, a11["b"]), (A, d3["t"])])
+    elbow(cv, [(d3["l"], d3["cy"]), (a12["r"], a12["cy"])], "[non]", 1060, d3["cy"] - 20)
+    elbow(cv, [(SD, a12["b"]), (SD, f2["t"])])
+    elbow(cv, [(A, d3["b"]), (A, y(1445)), (M + 150, y(1445)), (M + 150, a13["cy"] - 5), (a13["r"], a13["cy"] - 5)], "[oui]", 1280, d3["b"] + 4)
+    elbow(cv, [(M, a13["b"]), (M, a14["t"])])
+    elbow(cv, [(a14["l"], a14["cy"]), (C, a14["cy"]), (C, a15["t"])])
+    elbow(cv, [(a15["r"], a15["cy"]), (f3["l"], f3["cy"])])
+    cv.save(out("10_diagramme_activite_reservation.png"))
+
+
+# ============================================================ 11. DIAGRAMME DE COMMUNICATION
+def communication():
+    cv = Canvas(1800, 560)
+    cl = comm_object(cv, 110, 230, "Client", actor=True)
+    app = comm_object(cv, 640, 230, ":Application mobile")
+    api = comm_object(cv, 1170, 230, ":API FastAPI")
+    db = comm_object(cv, 1690, 230, ":Base MySQL")
+    adm = comm_object(cv, 640, 470, "Administrateur", actor=True)
+    cv.line([(cl["r"] + 6, 230), (app["l"], 230)])
+    cv.line([(app["r"], 230), (api["l"], 230)])
+    cv.line([(api["r"], 230), (db["l"], 230)])
+    cv.line([(640, app["b"]), (640, adm["t"] - 8)])
+    comm_messages(cv, cl["r"], app["l"], 230, [
+        ("1 : s'authentifier()", ">"),
+        ("2 : choisir la salle, la date et l'horaire", ">"),
+        ("3 : accepter le règlement intérieur", ">"),
+        ("5 : payer la réservation", ">"),
+    ])
+    comm_messages(cv, app["r"], api["l"], 230, [
+        ("1.1 : POST /auth/login", ">"),
+        ("1.3 : authentifié (jeton JWT)", "<"),
+        ("4 : POST /reservations", ">"),
+        ("5.1 : POST /reservations/{id}/pay", ">"),
+        ("6.1 : POST /reservations/{id}/validate", ">"),
+    ])
+    comm_messages(cv, api["r"], db["l"], 230, [
+        ("1.2 : vérifier l'email et le mot de passe", ">"),
+        ("4.1 : vérifier la disponibilité du créneau", ">"),
+        ("4.2 : enregistrer la réservation et le code", ">"),
+        ("5.2 : enregistrer le paiement", ">"),
+        ("6.2 : valider et enregistrer le reçu", ">"),
+    ])
+    cv.line([(660, 340), (660, 392)])
+    cv.head((660, 392), (660, 340), "filled", size=8)
+    cv.text(676, 366, "6 : valider la réservation", size=11, anchor="lm")
+    cv.save(out("11_diagramme_communication_reservation.png"))
+
+
+# ============================================================ 12. COMMUNICATION (style du rapport : cyan / bleu)
+def communication_rapport(path):
+    import dessin
+    saved = (dessin.YELLOW, dessin.LINE, dessin.SHADOW, dessin.FONT, dessin.BOLD)
+    dessin.YELLOW, dessin.LINE, dessin.SHADOW = (192, 255, 255), (30, 144, 255), (170, 170, 170)
+    dessin.FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf"
+    dessin.BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"
+    try:
+        F, M = 16, 15                      # tailles : objets, messages
+        cv = Canvas(1800, 760)
+        cv.text(900, 22, "Diagramme de communication", size=22, bold=True, anchor="ma")
+        cv.text(900, 58, "Réservation d'une installation", size=16, bold=True, anchor="ma")
+        cl = comm_object(cv, 90, 250, ":Client", actor=True, fs=F)
+        app = comm_object(cv, 560, 250, ":ApplicationFlutter", w=240, h=52, fs=F)
+        api = comm_object(cv, 1060, 250, ":ApiFastAPI", w=210, h=52, fs=F)
+        lg = comm_object(cv, 1060, 590, ":LogiqueReservation", w=250, h=52, fs=F)
+        db = comm_object(cv, 1680, 590, ":BaseMySQL", w=210, h=52, fs=F)
+        cv.line([(cl["r"] + 6, 250), (app["l"], 250)])
+        cv.line([(app["r"], 250), (api["l"], 250)])
+        cv.line([(1060, api["b"]), (1060, lg["t"])])
+        cv.line([(lg["r"], 590), (db["l"], 590)])
+        comm_messages(cv, cl["r"], app["l"], 250, [
+            ("1 : s'authentifier()", ">"),
+            ("3 : demanderRéservation()", ">"),
+        ], fs=M)
+        comm_messages(cv, cl["r"], app["l"], 250, [
+            ("2 : authentifié (jeton JWT)", "<"),
+            ("12 : afficherConfirmation()", "<"),
+        ], above=False, fs=M)
+        comm_messages(cv, app["r"], api["l"], 250, [("4 : créerRéservation()", ">")], fs=M)
+        comm_messages(cv, app["r"], api["l"], 250, [("11 : retournerCodeEtStatut()", "<")], above=False, fs=M)
+        # liaison verticale API <-> Logique : 5 vers le bas, 10 vers le haut
+        cv.line([(1090, 350), (1090, 440)])
+        cv.head((1090, 440), (1090, 350), "filled", size=10)
+        cv.text(1106, 395, "5 : créerRéservation()", size=M, anchor="lm")
+        cv.line([(1030, 440), (1030, 350)])
+        cv.head((1030, 350), (1030, 440), "filled", size=10)
+        cv.text(1014, 395, "10 : retournerRéservation()", size=M, anchor="rm")
+        comm_messages(cv, lg["r"], db["l"], 590, [
+            ("6 : vérifierChevauchement()", ">"),
+            ("8 : enregistrerRéservation()", ">"),
+            ("9 : enregistrerCodeSécurité()", ">"),
+        ], fs=M)
+        comm_messages(cv, lg["r"], db["l"], 590, [("7 : retournerCréneauxOccupés()", "<")], above=False, fs=M)
+        cv.save(path)
+    finally:
+        dessin.YELLOW, dessin.LINE, dessin.SHADOW, dessin.FONT, dessin.BOLD = saved
+
+
 if __name__ == "__main__":
     cas_client()
     cas_admin()
@@ -346,4 +494,7 @@ if __name__ == "__main__":
     seq_mdp()
     deploiement()
     etats()
+    activite()
+    communication()
+    communication_rapport(out("fig07_communication_reservation.png"))
     print("Diagrammes générés dans", ICI)

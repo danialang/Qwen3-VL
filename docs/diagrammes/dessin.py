@@ -40,18 +40,21 @@ class Canvas:
                               anchor=anchor, align={"l": "left", "m": "center", "r": "right"}[anchor[0]],
                               spacing=self.p(spacing))
 
-    def rect(self, x, y, w, h, fill=YELLOW, shadow=True, width=1):
+    def rect(self, x, y, w, h, fill=None, shadow=True, width=1):
+        fill = YELLOW if fill is None else fill
         if shadow:
             self.d.rectangle([self.p(x + 4), self.p(y + 4), self.p(x + w + 4), self.p(y + h + 4)], fill=SHADOW)
         self.d.rectangle([self.p(x), self.p(y), self.p(x + w), self.p(y + h)], fill=fill, outline=LINE, width=self.p(width))
 
-    def ellipse(self, cx, cy, w, h, fill=YELLOW, shadow=True):
+    def ellipse(self, cx, cy, w, h, fill=None, shadow=True):
+        fill = YELLOW if fill is None else fill
         if shadow:
             self.d.ellipse([self.p(cx - w / 2 + 4), self.p(cy - h / 2 + 4), self.p(cx + w / 2 + 4), self.p(cy + h / 2 + 4)], fill=SHADOW)
         self.d.ellipse([self.p(cx - w / 2), self.p(cy - h / 2), self.p(cx + w / 2), self.p(cy + h / 2)],
                        fill=fill, outline=LINE, width=self.p(1))
 
-    def line(self, pts, dash=False, width=1, fill=LINE):
+    def line(self, pts, dash=False, width=1, fill=None):
+        fill = LINE if fill is None else fill
         for (x1, y1), (x2, y2) in zip(pts, pts[1:]):
             if not dash:
                 self.d.line([self.p(x1), self.p(y1), self.p(x2), self.p(y2)], fill=fill, width=self.p(width))
@@ -168,7 +171,7 @@ def class_box(cv, x, y, w, name, attrs, ops=(), stereotype=None):
 
 
 # ---------- séquence ----------
-def sequence(path, lifelines, steps, gap=300, left=110, header=64, step_h=48, extra_w=130):
+def sequence(path, lifelines, steps, gap=300, left=110, header=64, step_h=48, extra_w=130, numbered=False):
     n = len(lifelines)
     xs = [left + i * gap for i in range(n)]
     idx = {name: i for i, (name, _) in enumerate(lifelines)}
@@ -180,7 +183,7 @@ def sequence(path, lifelines, steps, gap=300, left=110, header=64, step_h=48, ex
         if kind == "msg":
             _, a, b, label, style, act = (st + (False,))[:6] if len(st) == 5 else st
             num += 1
-            placed.append(("msg", y, idx[a], idx[b], f"{num} : {label}", style))
+            placed.append(("msg", y, idx[a], idx[b], f"{num} : {label}" if numbered else label, style))
             if style == "call" and act:
                 stack.setdefault(b, []).append(y)
             if style == "return" and stack.get(a):
@@ -189,7 +192,7 @@ def sequence(path, lifelines, steps, gap=300, left=110, header=64, step_h=48, ex
         elif kind == "self":
             _, a, label, act = st
             num += 1
-            placed.append(("self", y, idx[a], f"{num} : {label}"))
+            placed.append(("self", y, idx[a], f"{num} : {label}" if numbered else label))
             acts.append((idx[a], y - 8, y + 34))
             y += 62 + 12 * label.count("\n")
         elif kind in ("alt", "opt", "loop"):
@@ -293,3 +296,63 @@ def state(cv, cx, cy, w, h, label):
                            outline=LINE, width=cv.p(1))
     cv.text(cx, cy, label, size=13, bold=True, anchor="mm")
     return {"cx": cx, "cy": cy, "w": w, "h": h}
+
+
+# ---------- activité ----------
+def action(cv, cx, cy, label, w=220):
+    h = 20 * (label.count("\n") + 1) + 22
+    cv.d.rounded_rectangle([cv.p(cx - w / 2 + 4), cv.p(cy - h / 2 + 4), cv.p(cx + w / 2 + 4), cv.p(cy + h / 2 + 4)], radius=cv.p(16), fill=SHADOW)
+    cv.d.rounded_rectangle([cv.p(cx - w / 2), cv.p(cy - h / 2), cv.p(cx + w / 2), cv.p(cy + h / 2)], radius=cv.p(16), fill=YELLOW,
+                           outline=LINE, width=cv.p(1))
+    cv.text(cx, cy, label, size=11, anchor="mm")
+    return {"cx": cx, "cy": cy, "w": w, "h": h, "l": cx - w / 2, "r": cx + w / 2, "t": cy - h / 2, "b": cy + h / 2}
+
+
+def decision(cv, cx, cy, label, w=210, h=96):
+    pts = [(cx, cy - h / 2), (cx + w / 2, cy), (cx, cy + h / 2), (cx - w / 2, cy)]
+    cv.d.polygon([(cv.p(x + 4), cv.p(y + 4)) for x, y in pts], fill=SHADOW)
+    cv.d.polygon([(cv.p(x), cv.p(y)) for x, y in pts], fill=YELLOW, outline=LINE)
+    cv.text(cx, cy, label, size=11, anchor="mm")
+    return {"cx": cx, "cy": cy, "t": cy - h / 2, "b": cy + h / 2, "l": cx - w / 2, "r": cx + w / 2}
+
+
+def initial_node(cv, cx, cy):
+    cv.d.ellipse([cv.p(cx - 10), cv.p(cy - 10), cv.p(cx + 10), cv.p(cy + 10)], fill=BLACK)
+    return {"cx": cx, "cy": cy, "t": cy - 10, "b": cy + 10, "l": cx - 10, "r": cx + 10}
+
+
+def final_node(cv, cx, cy):
+    cv.d.ellipse([cv.p(cx - 15), cv.p(cy - 15), cv.p(cx + 15), cv.p(cy + 15)], fill=WHITE, outline=LINE, width=cv.p(2))
+    cv.d.ellipse([cv.p(cx - 9), cv.p(cy - 9), cv.p(cx + 9), cv.p(cy + 9)], fill=BLACK)
+    return {"cx": cx, "cy": cy, "t": cy - 15, "b": cy + 15, "l": cx - 15, "r": cx + 15}
+
+
+# ---------- communication ----------
+def comm_object(cv, cx, cy, label, w=170, h=44, actor=False, fs=12):
+    if actor:
+        cv.actor(cx, cy - 36, "")
+        cv.text(cx, cy + 36, label, size=fs, bold=True, anchor="ma")
+        return {"cx": cx, "cy": cy, "l": cx - 26, "r": cx + 26, "t": cy - 38, "b": cy + 34}
+    cv.rect(cx - w / 2, cy - h / 2, w, h)
+    tw = cv.tw(label, fs, True)
+    cv.text(cx, cy, label, size=fs, bold=True, anchor="mm")
+    cv.line([(cx - tw / 2, cy + 9), (cx + tw / 2, cy + 9)], width=1, fill=BLACK)
+    return {"cx": cx, "cy": cy, "l": cx - w / 2, "r": cx + w / 2, "t": cy - h / 2, "b": cy + h / 2}
+
+
+def comm_messages(cv, x1, x2, y_line, rows, above=True, fs=11):
+    """Messages numérotés posés le long d'un lien horizontal ; chaque ligne = (texte, sens) avec sens '>' ou '<'."""
+    n = len(rows)
+    mid = (x1 + x2) / 2
+    for i, (text, sens) in enumerate(rows):
+        step = fs * 2 + 2
+        y = y_line - 18 - (n - 1 - i) * step if above else y_line + 18 + i * step
+        tw = cv.tw(text, fs)
+        total = 34 + 8 + tw
+        x0 = mid - total / 2
+        cv.line([(x0, y), (x0 + 30, y)])
+        if sens == ">":
+            cv.head((x0 + 32, y), (x0, y), "filled", size=8)
+        else:
+            cv.head((x0, y), (x0 + 30, y), "filled", size=8)
+        cv.text(x0 + 42, y, text, size=fs, anchor="lm")

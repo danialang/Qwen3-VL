@@ -1,0 +1,45 @@
+@startuml
+!include style.iuml
+title Diagramme d'activité : gestion d'une réservation
+|#DDEBF7|Client|
+start
+:Se connecter et choisir\nl'installation;
+:Accepter le règlement;
+:Sélectionner une date\net des horaires;
+|#DDEBF7|Système|
+:Vérifier la disponibilité\ndu créneau;
+|#DDEBF7|Base de données|
+:Lire les réservations\ndéjà enregistrées;
+|#DDEBF7|Système|
+if (Créneau disponible ?) then (non)
+  :Proposer la\nprochaine date libre;
+  stop
+else (oui)
+endif
+if (Usage interne ?) then (oui)
+  :Fixer le montant à 0 FCFA\net valider d'office;
+else (non)
+  :Appliquer le montant fixe\n(5 000 000 FCFA);
+  |#DDEBF7|Base de données|
+  :Enregistrer la réservation\n"en attente" + code de sécurité;
+  |#DDEBF7|Client|
+  :Payer (Orange Money, MTN\nMobile Money ou PayPal);
+  |#DDEBF7|Système|
+  :Enregistrer le paiement;
+  if (Validation par l'administrateur ?) then (refusée)
+    |#DDEBF7|Base de données|
+    :Passer la réservation\nà "annulée";
+    |#DDEBF7|Système|
+    stop
+  else (acceptée)
+  endif
+endif
+:Générer le reçu PDF,\nle code et le QR code signé;
+|#DDEBF7|Base de données|
+:Enregistrer la réservation\nvalidée et le reçu;
+|#DDEBF7|Client|
+:Télécharger le reçu\net se présenter le jour J;
+|#DDEBF7|Système|
+:Vérifier le reçu\npar scan du QR code;
+stop
+@enduml

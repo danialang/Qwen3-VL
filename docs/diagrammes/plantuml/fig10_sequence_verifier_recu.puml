@@ -1,0 +1,24 @@
+@startuml
+!include style.iuml
+title Diagramme de séquence : Vérification d'un reçu par QR code
+actor Contrôleur
+participant "Téléphone\n(appareil photo)" as Tel
+participant "API FastAPI" as API
+participant "Base MySQL" as DB
+
+Contrôleur -> Tel : Scanne le QR code du reçu
+activate Tel
+Tel -> API : GET /verify/{id}/{jeton}
+activate API
+API -> DB : SELECT réservation + code de sécurité
+DB --> API : Données de la réservation
+API -> API : Recalcule le jeton HMAC\net le compare
+alt jeton correct
+  API --> Tel : Page "REÇU AUTHENTIQUE"\n(statut, salle, date, nom masqué)
+else jeton faux ou reçu inconnu
+  API --> Tel : Page "REÇU NON AUTHENTIQUE" (404)
+end
+deactivate API
+Tel --> Contrôleur : Affiche le résultat
+deactivate Tel
+@enduml
