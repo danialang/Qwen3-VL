@@ -5,6 +5,8 @@ Application de réservation des salles du Collège Catholique Bilingue de la Ret
 
 ---
 
+# PARTIE 1 – Questions de cette discussion
+
 ## 1. Quelle est l'architecture de l'application ?
 
 **Réponse courte :** une architecture client-serveur en trois couches : une application mobile Flutter, une API REST en Python (FastAPI) et une base MySQL.
@@ -111,6 +113,234 @@ Application de réservation des salles du Collège Catholique Bilingue de la Ret
 
 ---
 
+---
+
+# PARTIE 2 – Questions posées dans les autres discussions
+
+Ces questions reprennent celles que tu as posées dans tes discussions précédentes sur le projet, ainsi que le questionnaire jury de 59 questions préparé le 07/10. Les doublons avec la partie 1 ont été retirés.
+
+## A. Présentation générale
+
+**7. Le projet est fait en quoi ? C'est quoi le backend et le frontend ?**
+- Backend : Python + FastAPI (`retraite-backend`). Il gère l'authentification, les conflits de créneaux, MySQL, le reçu PDF avec QR code et l'appel à Claude.
+- Frontend : Flutter/Dart (`retraite_mobile`). Il contient les écrans, vérifie le format des saisies et appelle l'API.
+- À dire au jury : « une application mobile Flutter reliée à un serveur Python FastAPI, avec les données dans MySQL ; les deux communiquent par une API REST ».
+
+**8. Résumer le projet en un paragraphe.**
+- Réservation du gymnase et de la salle des fêtes ; thème vert et doré, police Poppins, mode clair ou sombre.
+- Connexion sécurisée (JWT + bcrypt) avec trois rôles : client, admin, dev.
+- Parcours : vérification du créneau (une autre date est proposée s'il est pris), paiement simulé, validation par l'admin, reçu PDF avec code de sécurité et QR code.
+- Tableau de bord (revenus, taux d'occupation), assistant IA, mot de passe oublié par code envoyé par email. L'APK est construit par GitHub Actions.
+
+**9. C'est quoi un MVP ?**
+Minimum Viable Product : on livre d'abord le cœur fonctionnel, vite et sans fioritures, puis on l'améliore.
+
+**10. Pourquoi Flutter ?**
+Un seul code en Dart pour Android (et le web), avec une interface identique sur tous les appareils.
+
+**11. Pourquoi une appli mobile et pas un site web ?**
+Presque tous les clients ont un téléphone. Et Flutter peut aussi produire une version web si besoin.
+
+**12. Avez-vous utilisé Django ?**
+**Non**, c'est FastAPI. Si on parle de MVT, j'explique la correspondance avec mon code (question 15), sans prétendre avoir utilisé Django.
+
+**13. C'est quoi une API REST ? Quelles sont les routes principales ?**
+- Chaque ressource a une URL : GET pour lire, POST pour créer, réponses en JSON.
+- Authentification : `/auth/register`, `/auth/login`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/change-password`, `/auth/me`.
+- Réservations : `/reservations`, plus `/availability`, `/{id}/pay`, `/{id}/validate`, `/{id}/cancel`, `/{id}/receipt`.
+- Autres : `/admin/stats`, `/verify/{id}/{jeton}` et `/assistant/client` ou `/assistant/admin`.
+
+## B. Architecture : MVT et MVC
+
+**14. Quelle est l'architecture réelle ?**
+Une architecture client-serveur en trois couches, avec une API REST : présentation (Flutter), métier (FastAPI), données (SQLAlchemy + MySQL). Les échanges se font en JSON sur HTTP, avec un JWT.
+
+**15. MVT : que représentent M, V et T dans mon code ?**
+- MVT est le modèle de Django, pas celui de mon projet ; je donne la correspondance.
+- **M** : `models.py` (5 classes SQLAlchemy) et `schemas.py` (Pydantic).
+- **V** : les routeurs FastAPI et `reservation_logic.py`. Chez Django, la « vue » est la logique, pas l'écran.
+- **T** : les écrans Flutter (`lib/screens`, `lib/widgets`) et la page HTML de vérification des reçus.
+- Exemple : M = classe `Reservation`, V = `create_reservation` (vérifie le conflit puis enregistre), T = écran `screens/booking`.
+
+**16. Et en MVC ?**
+M = `models.py`, V = écrans Flutter, C = routeurs FastAPI. La « Vue » de Django joue le rôle du Contrôleur en MVC.
+
+## C. UML et méthode
+
+**17. Pourquoi UML ?**
+C'est une norme internationale, indépendante du langage et orientée objet.
+
+**18. Pourquoi 2TUP et pas Merise ou une méthode agile ?**
+2TUP mène en parallèle une branche fonctionnelle (les besoins) et une branche technique, qui se rejoignent à la conception. Merise sert surtout à modéliser les données. L'agile convient mieux à une équipe qui livre par petites versions.
+
+**19. Expliquer le diagramme de cas d'utilisation.**
+- Acteurs principaux : Utilisateur, Client, Administrateur.
+- Acteurs secondaires : le service Mobile Money et le service d'IA.
+
+**20. Que veut dire « include » vers S'authentifier ?**
+Que l'action est obligatoire : il faut être connecté. Dans le code, c'est le JWT ; sans jeton valide, l'API répond 401.
+
+**21. Acteur principal ou secondaire ?**
+Le principal déclenche l'action. Le secondaire est sollicité par le système (paiement, IA).
+
+**22. La flèche à triangle vide entre Client et Utilisateur ?**
+Une généralisation, c'est-à-dire un héritage : le Client est un Utilisateur.
+
+**23. Expliquer le diagramme de séquence « réserver et payer ».**
+POST `/reservations` → recherche d'un chevauchement → statut « en attente » + code de sécurité → réponse 201. Ensuite POST `/{id}/pay`, puis validation par l'admin.
+
+**24. Le cadre « alt » ?**
+Un si/sinon : si le créneau est libre, la réservation est créée ; s'il est occupé, elle est refusée et la prochaine date libre est proposée.
+
+**25. Diagramme de séquence ou de communication ?**
+La séquence montre l'ordre des messages dans le temps. La communication montre les liens entre les objets, avec des messages numérotés.
+
+**26. Diagramme d'activité ; différence avec un diagramme d'états ?**
+- Activité : trois couloirs (Client, Système, Admin) ; les losanges sont des décisions.
+- États : on suit un seul objet, la réservation, qui passe de « en attente » à « validée » ou « annulée ».
+
+**27. Expliquer le diagramme de déploiement.**
+Téléphone Android (Flutter) → HTTPS → FastAPI dans Docker → MySQL. Services externes : API Claude et serveur SMTP pour les emails. GitHub Actions construit l'APK. Mobile Money est indiqué comme « prévu ».
+
+**28. Rôle de GitHub Actions ?**
+Compiler automatiquement l'APK à chaque push.
+
+**29. Le diagramme de classes ?**
+Il est dans le rapport : 5 classes (User, Reservation, SecurityCode, Receipt, PasswordReset).
+
+## D. Base de données (en plus de la question 2)
+
+**30. Pourquoi MySQL ?**
+Une base relationnelle, gratuite et stable, adaptée à des données liées entre elles (un client a plusieurs réservations). En développement, je l'ai utilisée avec WampServer.
+
+**31. Comment les tables sont-elles créées ?**
+`Base.metadata.create_all` au démarrage du serveur, puis création des comptes de départ. L'adresse de la base est dans `DATABASE_URL`, dans le `.env`.
+
+**32. Relations entre les tables ?**
+User 1–N Reservation ; Reservation 1–1 SecurityCode ; Reservation 1–(0..1) Receipt.
+
+**33. Clé primaire / clé étrangère ?**
+`id` identifie chaque ligne. `reservations.user_id` pointe vers `users.id`.
+
+**34. Pourquoi une colonne `password_hash` ?**
+bcrypt produit une empreinte irréversible : le mot de passe n'est jamais stocké en clair.
+
+**35. Comment empêcher une double réservation ?**
+- La fonction `find_conflict` cherche une réservation de la même salle, à la même date et non annulée, avec début existant < fin demandée ET fin existante > début demandé.
+- En cas de conflit, une date libre dans les 30 jours est proposée.
+
+**36. C'est quoi `is_internal` ?**
+Une réservation du Collège (admin ou dev) : gratuite et validée tout de suite, mais elle bloque le créneau comme les autres.
+
+**37. Quels sont les états d'une réservation ?**
+pending (en attente), validated (validée), cancelled (annulée). Une réservation annulée libère le créneau.
+
+**38. Le montant ?**
+`RESERVATION_AMOUNT` = 5 000 000 FCFA, défini dans le `.env` et copié dans la colonne `amount` à la création.
+
+**39. La table security_codes ?**
+Un code de 8 caractères (`secrets.token_hex`), imprimé sur le reçu et utilisé dans la signature du QR code.
+
+**40. Comment le QR code empêche-t-il la fraude ?**
+Il contient le lien `/verify/{id}/{jeton}`. Le jeton est calculé en HMAC-SHA256 à partir de l'id, du code de sécurité et de la clé secrète du serveur. Sans cette clé, impossible de fabriquer un faux reçu valide.
+
+**41. Mot de passe oublié côté base ?**
+On stocke l'empreinte du code, sa date d'expiration, un compteur d'essais et un marqueur « déjà utilisé ».
+
+**42. Sécuriser et sauvegarder la base ?**
+- Les secrets sont dans le `.env`, jamais sur GitHub. SQLAlchemy protège contre l'injection SQL. Chaque requête a sa propre session (`get_db`).
+- Sauvegarde : `mysqldump`, les volumes Docker, puis les sauvegardes automatiques de l'hébergeur.
+
+**43. Pourquoi `email` en VARCHAR(191) ?**
+En utf8mb4, MySQL limite la taille d'un index. Avec 255 caractères, j'avais l'erreur « clé trop longue » ; avec 191, ça passe.
+
+## E. Sécurité, connexion et rôles
+
+**44. Comment fonctionne la connexion ?**
+Le mot de passe est vérifié avec bcrypt, puis le serveur renvoie un JWT signé, valable 120 minutes. L'appli l'envoie à chaque requête et `get_current_user` le vérifie.
+
+**45. Comment sont gérés les rôles ?**
+Les routes sensibles utilisent `require_roles(admin, dev)` ; sinon le serveur répond 403 (accès interdit).
+
+**46. Pourquoi un nouvel inscrit est-il toujours client ?**
+C'est voulu : sinon n'importe qui pourrait se déclarer admin. Le rôle admin est attribué à la main.
+
+**47. Le rôle dev ?**
+Le développeur a les mêmes droits que l'admin, et ses réservations sont internes, donc gratuites.
+
+**48. Validations à l'inscription ; pourquoi les refaire côté serveur ?**
+- Nom sans chiffres, email d'un fournisseur reconnu, mot de passe fort, confirmation du mot de passe.
+- Elles sont vérifiées dans `validators.dart` puis revérifiées dans `validators.py`, car on peut appeler l'API sans passer par l'appli.
+
+**49. L'application est-elle sécurisée ?**
+- En place : bcrypt, JWT à durée limitée, rôles, reçus signés en HMAC, secrets dans le `.env`, validations côté serveur.
+- Pour la production : HTTPS partout (prévu avec Caddy) et sauvegardes automatiques.
+
+**50. La clé secrète de test pose-t-elle problème ?**
+Elle suffit pour les tests. En production, il faut une clé longue et aléatoire ; le serveur refuse d'ailleurs de démarrer en mode production sans `SECRET_KEY`.
+
+## F. IA (en plus des questions 5 et 6)
+
+**51. Que se passe-t-il si l'IA ne marche pas ?**
+L'application fonctionne sans elle : l'assistant est un confort. Ses outils appellent la même `reservation_logic.py` que l'API, donc les mêmes règles s'appliquent et il ne peut pas créer de double réservation.
+
+**52. Pourquoi « assistant temporairement indisponible » ? Comment changer la clé API ?**
+Le crédit Anthropic était épuisé. Il faut acheter du crédit (console Anthropic, Plans & Billing) et mettre la clé dans le `.env` (`ANTHROPIC_API_KEY`), puis redémarrer le serveur.
+
+## G. Paiement, tableau de bord, déploiement, limites
+
+**53. Le paiement Mobile Money est-il réel ?**
+**Non**, il est simulé : la route `/pay` enregistre la méthode et la référence. Pour un vrai paiement (PaySika par exemple), il faudrait un compte marchand, des clés de test, une route de création du paiement et un webhook signé, donc un serveur hébergé en ligne.
+
+**54. Comment est le tableau de bord admin ?**
+Il affiche les réservations du mois, les revenus du mois, les revenus à venir, les revenus de l'année mois par mois, le nombre de réservations en attente et le taux d'occupation du mois. Un bilan annuel donne aussi les réservations par salle, par statut, internes ou externes, et le taux d'occupation de l'année (`stats.py`).
+
+**55. Comment sont calculés les « revenus du mois » ?**
+On compte seulement les réservations **validées** et payantes dont la date d'événement tombe dans le mois. Par prudence comptable, un revenu n'est compté qu'après validation.
+
+**56. Comment héberger le serveur ?**
+Avec Docker : un Dockerfile pour l'API (uvicorn), docker-compose pour l'API et MySQL, et Caddy pour le HTTPS. Railway est proposé comme hébergeur (fichier `railway.json`), avec une base MySQL hébergée.
+
+**57. Et sur le Play Store ?**
+Il faut un compte développeur Google Play (environ 25 $, à payer une fois), un APK ou AAB signé, une fiche (description, captures, politique de confidentialité) et un serveur en ligne : sur le Play Store, l'appli ne peut pas dépendre d'un PC local. C'est prévu : le reçu peut même afficher un 2e QR code qui mène à la page de téléchargement (`APP_DOWNLOAD_URL`).
+
+**58. Pourquoi l'appli ne se connecte plus quand on change de réseau ?**
+Le serveur tourne sur le PC, et son adresse IP change selon le Wi-Fi (172.20.10.x ou 192.168.x.x). La solution est l'hébergement en ligne, avec une adresse fixe.
+
+**59. Comment proposer l'appli en français et en anglais ?**
+Avec l'internationalisation de Flutter (`flutter_localizations` et des fichiers de traduction `.arb`). J'ai choisi de rester en français pour le moment, la langue des utilisateurs du Collège ; c'est une amélioration possible, d'autant plus que le Collège est bilingue.
+
+**60. Comment sont gérées les erreurs ?**
+Avec `HTTPException` et des messages en français (400, 401, 403, 404, 409). Un gestionnaire global traite les erreurs 500, et les détails partent dans les logs.
+
+**61. Où est la configuration ?**
+Dans le `.env`, lu par `config.py`. Seul `.env.example` (sans les secrets) est publié sur GitHub.
+
+**62. Qu'est-ce qui est fini, qu'est-ce qui reste à faire ?**
+- Reste : le vrai Mobile Money, l'hébergement en ligne, la publication sur le Play Store, des statistiques plus poussées.
+- **Piège** : « gérer les remises » et « consulter les anomalies » figurent sur le diagramme mais ne sont pas développés. Si on te le demande, dis-le franchement : ce sont des évolutions prévues.
+
+**63. Quelles difficultés as-tu rencontrées ?**
+Garder une seule règle de réservation pour l'API et pour l'IA, détecter les chevauchements d'horaires, empêcher la falsification des reçus, et gérer l'IP du serveur qui change selon le réseau.
+
+## H. Code Flutter et modification en direct
+
+**64. Comment est organisé le code Flutter ?**
+Le dossier `lib/` contient `core` (thème, client API, session, validations), `models`, `screens`, `services` et `widgets`.
+
+**65. Comment l'appli parle-t-elle au serveur ? Gestion d'état ?**
+`ApiClient` (paquet `http`, avec le JWT) et les services. Pour l'état, Provider : `SessionProvider` (l'utilisateur connecté) et `ThemeModeProvider` (clair ou sombre).
+
+**66. Si on te demande de changer une couleur en direct ?**
+1. Ouvrir `retraite_mobile/lib/core/theme.dart`, classe `CollegeColors`, par exemple `green = Color(0xFF0B6E4F)`.
+2. Changer le code hexadécimal (`0xFF` = opaque, suivi de RRVVBB). Tout le thème suit grâce à `ColorScheme.fromSeed`.
+3. Appuyer sur `r` dans le terminal (hot reload) ou reconstruire l'APK.
+- Pour un seul écran : mettre la couleur directement sur le widget (à éviter).
+- Le logo est dans `assets/images` ; le nom de l'appli dans `kAppName` (`constants.dart`).
+- Les couleurs du reçu PDF sont dans `receipts.py` (ReportLab) ; les reçus déjà générés ne changent pas.
+
+---
+
 ## Mémo express (30 secondes avant d'entrer)
 
 - Architecture : **Flutter → FastAPI → MySQL**
@@ -119,6 +349,9 @@ Application de réservation des salles du Collège Catholique Bilingue de la Ret
 - Objectif : **informatiser la réservation du gymnase et de la salle des fêtes**
 - IA : **2 assistants (client / admin), qui n'agissent que via mes fonctions**
 - Création de l'IA : **API Claude + prompt système + outils + boucle de 6 tours max**
+- Sécurité : **bcrypt + JWT 120 min + rôles + reçu signé HMAC + secrets dans .env**
+- Anti double réservation : **find_conflict (même salle, même date, horaires qui se chevauchent)**
+- Pièges : **pas Django · paiement simulé · remises/anomalies pas développées**
 
 ---
 
