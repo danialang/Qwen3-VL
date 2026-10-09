@@ -1,0 +1,35 @@
+@startuml
+!include style.iuml
+title Diagramme de séquence : Réinitialisation d'un mot de passe oublié
+actor Client
+participant "Application Flutter" as App
+participant "API FastAPI" as API
+participant "Base MySQL" as DB
+participant "Serveur SMTP" as SMTP
+
+Client -> App : "Mot de passe oublié ?" + email
+activate App
+App -> API : POST /auth/forgot-password
+activate API
+API -> DB : SELECT utilisateur
+opt compte existant et dernier code > 60 s
+  API -> DB : INSERT PasswordReset\n(code haché, expire dans 15 min)
+  API -> SMTP : Envoie le code à 6 chiffres
+end
+API --> App : 200 - même réponse dans tous les cas
+deactivate API
+Client -> App : Saisit le code et le nouveau mot de passe
+App -> API : POST /auth/reset-password
+activate API
+API -> DB : SELECT dernier code non utilisé
+alt code juste, non expiré, moins de 5 essais
+  API -> DB : UPDATE mot de passe (bcrypt), code utilisé
+  API --> App : 200 - Mot de passe modifié
+else code faux ou expiré
+  API -> DB : UPDATE essais + 1
+  API --> App : 400 - Code invalide ou expiré
+end
+deactivate API
+App --> Client : Affiche le résultat
+deactivate App
+@enduml
