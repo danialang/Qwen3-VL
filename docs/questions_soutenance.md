@@ -119,3 +119,43 @@ Application de réservation des salles du Collège Catholique Bilingue de la Ret
 - Objectif : **informatiser la réservation du gymnase et de la salle des fêtes**
 - IA : **2 assistants (client / admin), qui n'agissent que via mes fonctions**
 - Création de l'IA : **API Claude + prompt système + outils + boucle de 6 tours max**
+
+---
+
+## Confiance en soi et éloquence
+
+### La veille au soir
+- Relis seulement les « réponses courtes » et le mémo express. Pas de nouveau contenu : tu connais déjà ton projet mieux que le jury.
+- Prépare tes affaires (clé USB, PC chargé, APK installé sur le téléphone, chargeur) pour ne rien avoir à chercher le matin.
+- Dors. Une nuit complète vaut plus qu'une heure de révision en plus.
+
+### Le matin
+- Mange un peu, bois de l'eau, évite trop de café (il fait trembler la voix).
+- Relis le mémo express une fois, à voix haute.
+- Juste avant d'entrer : respiration 4-4-6 (inspirer 4 secondes, bloquer 4, souffler 6), trois fois. Ça calme le cœur.
+- Posture : dos droit, épaules ouvertes, deux minutes. Le corps envoie au cerveau le message que tout va bien.
+
+### Pendant la présentation
+- **Les deux premières phrases** : apprends-les par cœur. Une fois lancé, le stress baisse tout seul.
+- **Parle lentement.** Le stress fait accélérer ; si tu as l'impression de parler un peu trop lentement, c'est la bonne vitesse.
+- **Fais des pauses.** Un silence d'une seconde après une idée importante montre que tu es sûr de toi.
+- **Regarde les membres du jury**, à tour de rôle, pas l'écran ni tes notes.
+- **Dis « j'ai »** : « j'ai choisi FastAPI parce que… », « j'ai sécurisé la clé API… ». C'est ton travail, assume-le.
+- Les mains : posées ou qui accompagnent la parole, jamais dans les poches.
+
+### Face aux questions
+- **Écoute la question jusqu'au bout**, sans couper.
+- **Prends deux secondes** avant de répondre. C'est normal, et ça paraît réfléchi.
+- Commence par la **réponse courte**, puis donne un détail. Ne récite pas tout ce que tu sais.
+- **Si tu ne sais pas** : « Je n'ai pas approfondi ce point, mais voici comment je m'y prendrais… ». C'est beaucoup mieux qu'inventer.
+- **Si tu n'as pas compris** : « Pouvez-vous reformuler, s'il vous plaît ? ». C'est une question normale.
+- Une critique du jury n'est pas une attaque. Réponds : « C'est une bonne remarque, c'est une amélioration que je peux prévoir », puis cite une piste.
+
+### Phrases utiles
+- « Pour faire simple, … »
+- « Le choix s'explique par deux raisons : … et … »
+- « Concrètement, dans l'application, ça donne… »
+- « Avec plus de temps, j'aurais ajouté… »
+
+### À se dire avant d'entrer
+Tu as construit une application complète : un mobile, une API, une base de données, une IA, des reçus PDF avec QR code et un déploiement Docker. Le jury vient voir ce que tu as fait, pas te piéger. Tu es la personne qui connaît le mieux ce projet dans la salle.
