@@ -1,0 +1,33 @@
+@startuml
+!include style.iuml
+title Diagramme de séquence : Validation d'une réservation et émission du reçu
+actor Administrateur
+participant "Application Flutter" as App
+participant "API FastAPI" as API
+participant "Base MySQL" as DB
+
+Administrateur -> App : Ouvre "Réservations & validations"
+activate App
+App -> API : GET /reservations
+activate API
+API -> DB : SELECT toutes les réservations
+DB --> API : Liste
+API --> App : 200 - Liste des réservations
+deactivate API
+Administrateur -> App : Valide une réservation en attente
+App -> API : POST /reservations/{id}/validate
+activate API
+alt rôle client
+  API --> App : 403 - Accès réservé à l'administration
+else réservation annulée
+  API --> App : 400 - Validation impossible
+else rôle admin ou dev
+  API -> DB : UPDATE Reservation (statut = validated)
+  API -> API : Génère le reçu PDF\n(code de sécurité + QR code signé HMAC)
+  API -> DB : INSERT Receipt
+  API --> App : 200 - Réservation validée
+end
+deactivate API
+App --> Administrateur : Affiche le nouveau statut (badge vert)
+deactivate App
+@enduml

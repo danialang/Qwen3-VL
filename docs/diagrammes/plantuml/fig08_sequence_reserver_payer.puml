@@ -1,0 +1,56 @@
+@startuml
+!include style.iuml
+title Diagramme de séquence : Processus de réservation
+actor Client
+participant "Application Flutter" as App
+participant "API FastAPI" as API
+participant "Base MySQL" as DB
+
+Client -> App : Choisit l'installation\net accepte le règlement intérieur
+activate App
+App --> Client : Affiche le calendrier
+deactivate App
+Client -> App : Ouvre le calendrier
+activate App
+App -> API : GET /reservations/availability?room=...
+activate API
+API -> DB : SELECT réservations non annulées
+DB --> API : Créneaux occupés
+API --> App : Liste des créneaux (sans données personnelles)
+deactivate API
+App --> Client : Affiche les jours occupés\n(doré = événement du Collège)
+deactivate App
+Client -> App : Choisit la date, l'heure de début et de fin
+activate App
+App -> API : POST /reservations\n{room, date, début, fin, accepted_rules}
+activate API
+alt règlement non accepté
+  API --> App : 400 - "Vous devez accepter le règlement intérieur"
+  App --> Client : Message d'erreur
+else créneau déjà pris
+  API -> DB : SELECT réservations qui se chevauchent
+  DB --> API : Réservation existante
+  API --> App : 409 - Créneau indisponible + prochaine date libre
+  App --> Client : Propose la nouvelle date
+else créneau libre
+  API -> DB : SELECT réservations qui se chevauchent
+  DB --> API : Aucune
+  API -> DB : INSERT Reservation\n(statut = pending, montant = 5 000 000 FCFA)
+  DB --> API : id de la réservation
+  API -> API : Génère le code de sécurité (8 caractères)
+  API -> DB : INSERT SecurityCode
+  API --> App : 201 - {id, statut, code}
+  App --> Client : Affiche l'écran de paiement
+end
+deactivate API
+deactivate App
+Client -> App : Choisit le moyen de paiement
+activate App
+App -> API : POST /reservations/{id}/pay\n{méthode, référence}
+activate API
+API -> DB : UPDATE Reservation\n(méthode, référence, date de paiement)
+API --> App : 200 - Réservation payée, en attente de validation
+deactivate API
+App --> Client : "Votre réservation attend la validation\nde l'administration" (badge jaune)
+deactivate App
+@enduml

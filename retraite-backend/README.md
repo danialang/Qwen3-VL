@@ -27,6 +27,27 @@ Au démarrage, les tables sont créées automatiquement et les comptes `DEV_EMAI
 
 Documentation interactive : http://127.0.0.1:8000/docs
 
+## Docker (base MySQL + API en une commande)
+
+```bash
+cp .env.example .env     # puis remplir MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD, SECRET_KEY, ADMIN_PASSWORD...
+docker compose up -d --build
+```
+
+L'API répond sur http://localhost:8000 (documentation : `/docs`). La base MySQL est créée automatiquement ;
+les données (base, reçus PDF, logs) sont conservées dans des volumes Docker, même après `docker compose down`
+(seul `docker compose down -v` les efface).
+
+HTTPS automatique avec un nom de domaine (certificat Let's Encrypt via Caddy) :
+
+```bash
+# dans .env : DOMAIN=retraite.exemple.com   et   PUBLIC_BASE_URL=https://retraite.exemple.com
+docker compose --profile https up -d --build
+```
+
+Avec une base MySQL hébergée (TiDB, Aiven...), on n'utilise que le service `api` : fournir `DATABASE_URL`
+(format `mysql://utilisateur:motdepasse@hote:port/base`) et lancer l'image seule (`docker build -t retraite-api .`).
+
 ## Endpoints principaux
 
 - `POST /auth/register` — inscription client

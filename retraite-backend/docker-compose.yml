@@ -1,0 +1,59 @@
+# Lance toute l'application d'un coup : base MySQL + API (+ HTTPS optionnel avec Caddy).
+#   docker compose up -d --build             -> API sur http://localhost:8000
+#   docker compose --profile https up -d     -> ajoute Caddy (HTTPS automatique, variable DOMAIN requise)
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: retraite_db
+      MYSQL_USER: retraite
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Définissez MYSQL_PASSWORD dans le fichier .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Définissez MYSQL_ROOT_PASSWORD dans le fichier .env}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  api:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Prioritaire sur le .env : dans Docker, la base s'appelle "db", pas 127.0.0.1.
+      DATABASE_URL: mysql+pymysql://retraite:${MYSQL_PASSWORD}@db:3306/retraite_db
+      PORT: "8000"
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - receipts_data:/app/receipts
+      - logs_data:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2
+    profiles: ["https"]
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on:
+      - api
+
+volumes:
+  mysql_data:
+  receipts_data:
+  logs_data:
+  caddy_data:

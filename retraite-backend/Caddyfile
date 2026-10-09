@@ -1,0 +1,4 @@
+# HTTPS automatique (certificat Let's Encrypt) devant l'API. DOMAIN vient du fichier .env.
+{$DOMAIN} {
+	reverse_proxy api:8000
+}
