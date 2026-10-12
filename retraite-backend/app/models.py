@@ -11,6 +11,7 @@ from sqlalchemy import (
     Integer,
     Numeric,
     String,
+    Text,
     Time,
 )
 from sqlalchemy.orm import relationship
@@ -25,8 +26,19 @@ class UserRole(str, enum.Enum):
 
 
 class RoomType(str, enum.Enum):
+    """Espaces réservables. Les noms doivent rester identiques aux clés de tariffs.SPACES."""
+
     gymnase = "gymnase"
     salle_fetes = "salle_fetes"
+    salle_reunion_repas = "salle_reunion_repas"
+    salle_reunion = "salle_reunion"
+    cours_externe_gymnase = "cours_externe_gymnase"
+    salle_fete_college = "salle_fete_college"
+    salle_reunion_college = "salle_reunion_college"
+    salle_classe = "salle_classe"
+    terrain_multisport = "terrain_multisport"
+    tatami = "tatami"
+    cours_college = "cours_college"
 
 
 class ReservationStatus(str, enum.Enum):
@@ -59,7 +71,11 @@ class Reservation(Base):
     start_time = Column(Time, nullable=False)
     end_time = Column(Time, nullable=False)
     status = Column(Enum(ReservationStatus), default=ReservationStatus.pending, nullable=False)
-    amount = Column(Numeric(12, 2), default=0, nullable=False)
+    amount = Column(Numeric(12, 2), default=0, nullable=False)  # location + prestations (hors caution)
+    deposit = Column(Numeric(12, 2), default=0, nullable=False, server_default="0")  # caution remboursable
+    client_category = Column(String(30), nullable=True)  # clé de tariffs.CATEGORY_LABELS
+    duration_type = Column(String(10), nullable=True)  # "short" (moins de 5 h) ou "day"
+    extras_json = Column(Text, nullable=True)  # prestations choisies (chaises, tables, sono), prix figés
     is_internal = Column(Boolean, default=False, nullable=False)
     accepted_rules = Column(Boolean, default=False, nullable=False)
     payment_method = Column(String(50), nullable=True)

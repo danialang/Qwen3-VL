@@ -11,6 +11,7 @@ import '../../core/theme.dart';
 import '../../models/reservation.dart';
 import '../../models/user.dart';
 import '../../services/reservation_service.dart';
+import '../../widgets/price_breakdown.dart';
 import '../../widgets/status_badge.dart';
 
 class ReservationDetailScreen extends StatefulWidget {
@@ -100,7 +101,17 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
             const SizedBox(height: 16),
             _InfoRow(label: 'Date', value: '${r.eventDate.day}/${r.eventDate.month}/${r.eventDate.year}'),
             _InfoRow(label: 'Horaire', value: '${formatTime(r.startTime)} - ${formatTime(r.endTime)}'),
-            _InfoRow(label: 'Montant', value: '${r.amount.toStringAsFixed(0)} FCFA'),
+            if (r.isInternal)
+              const _InfoRow(label: 'Montant', value: 'Gratuit')
+            else ...[
+              const SizedBox(height: 4),
+              Card(
+                color: CollegeColors.greenLight,
+                margin: EdgeInsets.zero,
+                child: Padding(padding: const EdgeInsets.all(14), child: PriceBreakdown.fromReservation(r)),
+              ),
+              const SizedBox(height: 8),
+            ],
             _InfoRow(label: 'Code de sécurité', value: r.securityCode ?? '—'),
             if (r.paymentMethod != null) _InfoRow(label: 'Paiement', value: '${r.paymentMethod} (réf. ${r.paymentReference})'),
             const SizedBox(height: 24),

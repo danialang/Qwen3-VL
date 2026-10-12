@@ -1,15 +1,131 @@
 import 'package:flutter/material.dart';
 
-enum Room { gymnase, salleFetes }
+import 'tariff.dart';
+
+enum Room {
+  gymnase,
+  salleFetes,
+  salleReunionRepas,
+  salleReunion,
+  coursExterneGymnase,
+  salleFeteCollege,
+  salleReunionCollege,
+  salleClasse,
+  terrainMultisport,
+  tatami,
+  coursCollege,
+}
 
 extension RoomApi on Room {
-  String get apiValue => this == Room.gymnase ? 'gymnase' : 'salle_fetes';
+  String get apiValue {
+    switch (this) {
+      case Room.gymnase:
+        return 'gymnase';
+      case Room.salleFetes:
+        return 'salle_fetes';
+      case Room.salleReunionRepas:
+        return 'salle_reunion_repas';
+      case Room.salleReunion:
+        return 'salle_reunion';
+      case Room.coursExterneGymnase:
+        return 'cours_externe_gymnase';
+      case Room.salleFeteCollege:
+        return 'salle_fete_college';
+      case Room.salleReunionCollege:
+        return 'salle_reunion_college';
+      case Room.salleClasse:
+        return 'salle_classe';
+      case Room.terrainMultisport:
+        return 'terrain_multisport';
+      case Room.tatami:
+        return 'tatami';
+      case Room.coursCollege:
+        return 'cours_college';
+    }
+  }
 
-  String get label => this == Room.gymnase ? 'Gymnase' : 'Salle des fêtes';
+  String get label {
+    switch (this) {
+      case Room.gymnase:
+        return 'Gymnase';
+      case Room.salleFetes:
+        return 'Salle des fêtes';
+      case Room.salleReunionRepas:
+        return 'Salle de réunion avec repas';
+      case Room.salleReunion:
+        return 'Salle de réunion';
+      case Room.coursExterneGymnase:
+        return 'Cours externes au gymnase';
+      case Room.salleFeteCollege:
+        return 'Salle de fête du Collège';
+      case Room.salleReunionCollege:
+        return 'Salle de réunion du Collège';
+      case Room.salleClasse:
+        return 'Salle de classe';
+      case Room.terrainMultisport:
+        return 'Terrain multisport';
+      case Room.tatami:
+        return 'Tatami';
+      case Room.coursCollege:
+        return 'Cours du Collège';
+    }
+  }
+
+  /// Précision affichée sous le nom dans la liste des autres espaces.
+  String get description {
+    switch (this) {
+      case Room.salleReunionRepas:
+        return '400 chaises, tables et repas dans la salle';
+      case Room.salleReunion:
+        return '400 chaises et tables';
+      case Room.coursExterneGymnase:
+        return 'Cours donnés dans le gymnase par un organisme extérieur';
+      case Room.salleFeteCollege:
+        return 'Petite salle de fête du Collège';
+      case Room.salleReunionCollege:
+        return 'Réunions de petite taille';
+      case Room.salleClasse:
+        return 'Une salle de classe du Collège';
+      case Room.terrainMultisport:
+        return 'Terrain de sport en plein air';
+      case Room.tatami:
+        return 'Espace d\'arts martiaux';
+      case Room.coursCollege:
+        return 'Locaux du Collège pour des cours';
+      case Room.gymnase:
+      case Room.salleFetes:
+        return '';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case Room.gymnase:
+      case Room.coursExterneGymnase:
+        return Icons.sports_basketball;
+      case Room.salleFetes:
+      case Room.salleFeteCollege:
+        return Icons.celebration;
+      case Room.salleReunionRepas:
+      case Room.salleReunion:
+      case Room.salleReunionCollege:
+        return Icons.groups;
+      case Room.salleClasse:
+      case Room.coursCollege:
+        return Icons.school;
+      case Room.terrainMultisport:
+        return Icons.sports_soccer;
+      case Room.tatami:
+        return Icons.sports_martial_arts;
+    }
+  }
 
   String get imageAsset => this == Room.gymnase ? 'assets/images/gymnase.jpg' : 'assets/images/salle_fetes.jpg';
 
-  static Room fromApi(String value) => value == 'gymnase' ? Room.gymnase : Room.salleFetes;
+  static Room fromApi(String value) => Room.values.firstWhere(
+        (r) => r.apiValue == value,
+        orElse: () => Room.salleFetes,
+      );
 }
 
 enum ReservationStatus { pending, validated, cancelled }
@@ -58,6 +174,10 @@ class Reservation {
   final TimeOfDay endTime;
   final ReservationStatus status;
   final double amount;
+  final double deposit;
+  final String? clientCategoryLabel;
+  final String? durationLabel;
+  final List<QuoteLine> extras;
   final bool isInternal;
   final int userId;
   final String? securityCode;
@@ -74,6 +194,10 @@ class Reservation {
     required this.endTime,
     required this.status,
     required this.amount,
+    this.deposit = 0,
+    this.clientCategoryLabel,
+    this.durationLabel,
+    this.extras = const [],
     required this.isInternal,
     required this.userId,
     required this.securityCode,
@@ -91,6 +215,12 @@ class Reservation {
         endTime: _parseTime(json['end_time'] as String),
         status: ReservationStatusX.fromApi(json['status'] as String),
         amount: double.parse(json['amount'].toString()),
+        deposit: double.tryParse(json['deposit']?.toString() ?? '') ?? 0,
+        clientCategoryLabel: json['client_category_label'] as String?,
+        durationLabel: json['duration_label'] as String?,
+        extras: ((json['extras'] as List?) ?? const [])
+            .map((e) => QuoteLine.fromJson(e as Map<String, dynamic>))
+            .toList(),
         isInternal: json['is_internal'] as bool,
         userId: json['user_id'] as int,
         securityCode: json['security_code'] as String?,
@@ -101,6 +231,9 @@ class Reservation {
       );
 
   bool get isPaid => paymentReference != null;
+
+  /// Ce que le client verse : location + prestations + caution remboursable.
+  double get totalDue => amount + deposit;
 }
 
 /// Créneau occupé, anonymisé (utilisé pour le calendrier client).

@@ -1,9 +1,10 @@
 from datetime import date, datetime, time
 from decimal import Decimal
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from .models import ReservationStatus, RoomType, UserRole
+from .tariffs import DEFAULT_CATEGORY, MAX_EXTRA_QUANTITY
 
 
 class UserCreate(BaseModel):
@@ -50,12 +51,19 @@ class Token(BaseModel):
     token_type: str = "bearer"
 
 
+class ExtraSelection(BaseModel):
+    key: str
+    quantity: int = Field(ge=1, le=MAX_EXTRA_QUANTITY)
+
+
 class ReservationCreate(BaseModel):
     room: RoomType
     event_date: date
     start_time: time
     end_time: time
     accepted_rules: bool
+    client_category: str = DEFAULT_CATEGORY
+    extras: list[ExtraSelection] = []
 
     @field_validator("end_time")
     @classmethod
@@ -66,6 +74,36 @@ class ReservationCreate(BaseModel):
         return v
 
 
+class QuoteRequest(BaseModel):
+    room: RoomType
+    start_time: time
+    end_time: time
+    client_category: str = DEFAULT_CATEGORY
+    extras: list[ExtraSelection] = []
+
+
+class QuoteLineOut(BaseModel):
+    key: str
+    label: str
+    quantity: int
+    unit_price: int
+    total: int
+
+
+class QuoteOut(BaseModel):
+    room: RoomType
+    client_category: str
+    client_category_label: str
+    duration_type: str
+    duration_label: str
+    rental: int
+    extras: list[QuoteLineOut]
+    extras_total: int
+    total: int
+    deposit: int
+    total_due: int
+
+
 class ReservationOut(BaseModel):
     id: int
     room: RoomType
@@ -74,6 +112,13 @@ class ReservationOut(BaseModel):
     end_time: time
     status: ReservationStatus
     amount: Decimal
+    deposit: Decimal = Decimal(0)
+    total_due: Decimal = Decimal(0)
+    client_category: str | None = None
+    client_category_label: str | None = None
+    duration_type: str | None = None
+    duration_label: str | None = None
+    extras: list[QuoteLineOut] = []
     is_internal: bool
     user_id: int
     security_code: str | None = None

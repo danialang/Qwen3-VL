@@ -4,9 +4,12 @@ import 'package:table_calendar/table_calendar.dart';
 
 import '../../core/api_client.dart';
 import '../../core/session.dart';
+import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../models/reservation.dart';
+import '../../models/tariff.dart';
 import '../../services/reservation_service.dart';
+import '../../widgets/price_breakdown.dart';
 import 'payment_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
@@ -29,11 +32,85 @@ class _CalendarScreenState extends State<CalendarScreen> {
   TimeOfDay _endTime = const TimeOfDay(hour: 12, minute: 0);
   bool _submitting = false;
 
+  // Tarifs : la grille et les prix viennent du serveur (le personnel du Collège ne paie rien : réservation interne).
+  TariffCatalog? _catalog;
+  String _category = 'personnel_exterieur';
+  final Map<String, int> _extras = {};
+  Quote? _quote;
+  String? _quoteError;
+  int _quoteSeq = 0;
+
+  bool get _isInternalUser => context.read<SessionProvider>().user?.isAdminOrDev ?? false;
+
   @override
   void initState() {
     super.initState();
     _service = ReservationService(context.read<SessionProvider>().api);
     _loadAvailability();
+    _loadCatalog();
+  }
+
+  Future<void> _loadCatalog() async {
+    try {
+      final catalog = await _service.catalog();
+      if (!mounted) return;
+      setState(() => _catalog = catalog);
+      _refreshQuote();
+    } catch (_) {
+      if (mounted) setState(() => _quoteError = 'Impossible de charger les tarifs.');
+    }
+  }
+
+  Future<void> _refreshQuote() async {
+    if (_isInternalUser) return;
+    final startMinutes = _startTime.hour * 60 + _startTime.minute;
+    final endMinutes = _endTime.hour * 60 + _endTime.minute;
+    if (endMinutes <= startMinutes) {
+      setState(() {
+        _quote = null;
+        _quoteError = "L'heure de fin doit être après l'heure de début.";
+      });
+      return;
+    }
+    final seq = ++_quoteSeq;
+    try {
+      final quote = await _service.quote(
+        room: widget.room,
+        start: _startTime,
+        end: _endTime,
+        clientCategory: _category,
+        extras: _extras,
+      );
+      if (!mounted || seq != _quoteSeq) return;
+      setState(() {
+        _quote = quote;
+        _quoteError = null;
+      });
+    } on ApiException catch (e) {
+      if (!mounted || seq != _quoteSeq) return;
+      setState(() {
+        _quote = null;
+        _quoteError = e.message;
+      });
+    } catch (_) {
+      if (!mounted || seq != _quoteSeq) return;
+      setState(() {
+        _quote = null;
+        _quoteError = 'Impossible de calculer le prix, vérifiez la connexion.';
+      });
+    }
+  }
+
+  void _changeExtra(String key, int delta) {
+    final next = (_extras[key] ?? 0) + delta;
+    setState(() {
+      if (next <= 0) {
+        _extras.remove(key);
+      } else {
+        _extras[key] = next;
+      }
+    });
+    _refreshQuote();
   }
 
   Future<void> _loadAvailability() async {
@@ -66,6 +143,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         _endTime = picked;
       }
     });
+    _refreshQuote();
   }
 
   Future<void> _submit() async {
@@ -86,6 +164,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         start: _startTime,
         end: _endTime,
         acceptedRules: true,
+        clientCategory: _category,
+        extras: _isInternalUser ? const {} : _extras,
       );
       if (!mounted) return;
       if (reservation.isInternal) {
@@ -122,6 +202,98 @@ class _CalendarScreenState extends State<CalendarScreen> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  Widget _buildPricing(BuildContext context) {
+    if (_isInternalUser) {
+      return const Card(
+        color: CollegeColors.greenLight,
+        child: Padding(
+          padding: EdgeInsets.all(14),
+          child: Text('Réservation interne du Collège : gratuite et validée automatiquement.'),
+        ),
+      );
+    }
+    final catalog = _catalog;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Votre catégorie', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        if (catalog == null)
+          Text(_quoteError ?? 'Chargement des tarifs...')
+        else ...[
+          DropdownButtonFormField<String>(
+            initialValue: _category,
+            isExpanded: true,
+            items: [
+              for (final c in catalog.categories) DropdownMenuItem(value: c.key, child: Text(c.label)),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() => _category = value);
+              _refreshQuote();
+            },
+          ),
+          if (catalog.allowsExtras(widget.room.apiValue)) ...[
+            const SizedBox(height: 8),
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              title: Text(
+                _extras.isEmpty ? 'Prestations en plus (chaises, tables, sonorisation)' : 'Prestations en plus : ${_extras.length} choisie(s)',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              children: [
+                for (final extra in catalog.extras)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    title: Text(extra.label),
+                    subtitle: Text('${formatFcfa(extra.unitPrice.toDouble())} l\'unité'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.remove_circle_outline),
+                          onPressed: (_extras[extra.key] ?? 0) > 0 ? () => _changeExtra(extra.key, -1) : null,
+                        ),
+                        SizedBox(width: 28, child: Text('${_extras[extra.key] ?? 0}', textAlign: TextAlign.center)),
+                        IconButton(
+                          icon: const Icon(Icons.add_circle_outline, color: CollegeColors.green),
+                          onPressed: () => _changeExtra(extra.key, 1),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ],
+        const SizedBox(height: 12),
+        if (_quote != null)
+          Card(
+            color: CollegeColors.greenLight,
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  PriceBreakdown.fromQuote(_quote!),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'La caution est remboursable et se verse en même temps que la location. '
+                    'Pour une location mensuelle ou annuelle, un taux forfaitaire s\'applique : contactez l\'administration.',
+                    style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else if (_quoteError != null)
+          Text(_quoteError!, style: const TextStyle(color: Colors.red)),
+      ],
+    );
   }
 
   @override
@@ -214,8 +386,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
+                _buildPricing(context),
+                const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: _submitting ? null : _submit,
+                  onPressed: _submitting || (!_isInternalUser && _quote == null) ? null : _submit,
                   child: _submitting
                       ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                       : const Text('Réserver ce créneau'),

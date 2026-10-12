@@ -9,8 +9,10 @@ from .assistant.client_router import router as assistant_client_router
 from .auth_router import router as auth_router
 from .database import Base, engine
 from .logging_config import setup_logging
+from .migrations import ensure_schema
 from .reservations_router import router as reservations_router
 from .seed import seed_initial_users
+from .tariffs_router import router as tariffs_router
 from .verify_router import router as verify_router
 
 setup_logging()
@@ -22,6 +24,7 @@ app = FastAPI(title="Réservation - Collège Catholique Bilingue de la Retraite"
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
+    ensure_schema(engine)
     seed_initial_users()
     logger.info("Application démarrée.")
 
@@ -34,6 +37,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 app.include_router(auth_router)
 app.include_router(reservations_router)
+app.include_router(tariffs_router)
 app.include_router(assistant_client_router)
 app.include_router(assistant_admin_router)
 app.include_router(admin_stats_router)

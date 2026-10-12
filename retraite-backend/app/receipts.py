@@ -1,3 +1,4 @@
+import json
 import os
 
 from reportlab.graphics import renderPDF
@@ -8,9 +9,12 @@ from reportlab.pdfgen import canvas
 
 from .config import settings
 from .models import Reservation, User
+from .tariffs import DURATION_LABELS, category_label, room_label
 from .verification import verification_url
 
-ROOM_LABELS = {"gymnase": "Gymnase", "salle_fetes": "Salle des fêtes"}
+
+def fcfa(value) -> str:
+    return f"{int(value):,} FCFA".replace(",", " ")
 
 
 def qr_drawing(data: str, size: float) -> Drawing:
@@ -40,17 +44,29 @@ def generate_receipt_pdf(reservation: Reservation, security_code: str, user: Use
     c.drawString(50, y, "Reçu de réservation")
     y -= 35
 
-    amount = int(reservation.amount)
+    deposit = int(reservation.deposit or 0)
     lines = [
         f"Réservation N° : {reservation.id}",
         f"Client : {user.full_name} ({user.email})",
-        f"Salle : {ROOM_LABELS[reservation.room.value]}",
+        f"Espace : {room_label(reservation.room.value)}",
         f"Date : {reservation.event_date.isoformat()}",
         f"Horaire : {reservation.start_time.strftime('%H:%M')} - {reservation.end_time.strftime('%H:%M')}",
-        f"Montant : {amount:,} FCFA".replace(",", " "),
-        f"Statut : {reservation.status.value}",
-        f"Code de sécurité : {security_code}",
     ]
+    if reservation.is_internal:
+        lines.append("Réservation interne du Collège : aucun paiement requis.")
+    else:
+        extras = json.loads(reservation.extras_json) if reservation.extras_json else []
+        extras_total = sum(int(e["total"]) for e in extras)
+        rental = int(reservation.amount) - extras_total
+        lines.append(f"Catégorie tarifaire : {category_label(reservation.client_category)}")
+        lines.append(f"Durée : {DURATION_LABELS.get(reservation.duration_type, '-')}")
+        lines.append(f"Location : {fcfa(rental)}")
+        for e in extras:
+            lines.append(f"  {e['label']} x {e['quantity']} : {fcfa(e['total'])}")
+        lines.append(f"Total location : {fcfa(reservation.amount)}")
+        lines.append(f"Caution remboursable : {fcfa(deposit)}")
+        lines.append(f"Total à verser (location + caution) : {fcfa(int(reservation.amount) + deposit)}")
+    lines += [f"Statut : {reservation.status.value}", f"Code de sécurité : {security_code}"]
     for line in lines:
         c.drawString(50, y, line)
         y -= 20

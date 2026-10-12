@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from datetime import datetime
@@ -9,15 +10,25 @@ from sqlalchemy.orm import Session
 from .database import get_db
 from .models import Receipt, Reservation, ReservationStatus, RoomType, User, UserRole
 from .receipts import generate_receipt_pdf
-from .reservation_logic import ReservationConflictError, create_reservation as create_reservation_record
-from .schemas import AvailabilityOut, PaymentCreate, ReservationCreate, ReservationOut
+from .reservation_logic import (
+    ReservationConflictError,
+    create_reservation as create_reservation_record,
+    quote_for,
+)
+from .schemas import AvailabilityOut, PaymentCreate, QuoteLineOut, QuoteOut, QuoteRequest, ReservationCreate, ReservationOut
+from .tariffs import DURATION_LABELS, TariffError, category_label, venue_rooms
 from .security import get_current_user, require_roles
 
 router = APIRouter(prefix="/reservations", tags=["reservations"])
 logger = logging.getLogger("retraite.reservations")
 
 
+def _extras_of(r: Reservation) -> list[QuoteLineOut]:
+    return [QuoteLineOut(**line) for line in json.loads(r.extras_json)] if r.extras_json else []
+
+
 def _to_out(r: Reservation) -> ReservationOut:
+    deposit = r.deposit or 0
     return ReservationOut(
         id=r.id,
         room=r.room,
@@ -26,6 +37,13 @@ def _to_out(r: Reservation) -> ReservationOut:
         end_time=r.end_time,
         status=r.status,
         amount=r.amount,
+        deposit=deposit,
+        total_due=r.amount + deposit,
+        client_category=r.client_category,
+        client_category_label=category_label(r.client_category) if r.client_category else None,
+        duration_type=r.duration_type,
+        duration_label=DURATION_LABELS.get(r.duration_type) if r.duration_type else None,
+        extras=_extras_of(r),
         is_internal=r.is_internal,
         user_id=r.user_id,
         security_code=r.security_code.code if r.security_code else None,
@@ -55,8 +73,17 @@ def create_reservation(
 
     try:
         reservation = create_reservation_record(
-            db, current_user, payload.room, payload.event_date, payload.start_time, payload.end_time
+            db,
+            current_user,
+            payload.room,
+            payload.event_date,
+            payload.start_time,
+            payload.end_time,
+            client_category=payload.client_category,
+            extras={e.key: e.quantity for e in payload.extras},
         )
+    except TariffError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
     except ReservationConflictError as e:
         logger.info(
             "Conflit de réservation refusé pour user_id=%s room=%s date=%s : %s",
@@ -69,6 +96,34 @@ def create_reservation(
         reservation.id, current_user.id, reservation.room.value, reservation.event_date, reservation.status.value,
     )
     return _to_out(reservation)
+
+
+@router.post("/quote", response_model=QuoteOut)
+def get_quote(payload: QuoteRequest, current_user: User = Depends(get_current_user)):
+    """Prix d'une location avant de réserver : l'application l'affiche en direct à chaque choix du client."""
+    try:
+        quote = quote_for(
+            payload.room,
+            payload.client_category,
+            payload.start_time,
+            payload.end_time,
+            {e.key: e.quantity for e in payload.extras},
+        )
+    except TariffError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    return QuoteOut(
+        room=payload.room,
+        client_category=quote.category,
+        client_category_label=category_label(quote.category),
+        duration_type=quote.duration_type,
+        duration_label=DURATION_LABELS[quote.duration_type],
+        rental=quote.rental,
+        extras=[QuoteLineOut(**vars(line)) for line in quote.extras],
+        extras_total=quote.extras_total,
+        total=quote.total,
+        deposit=quote.deposit,
+        total_due=quote.total_due,
+    )
 
 
 @router.get("", response_model=list[ReservationOut])
@@ -88,7 +143,8 @@ def get_availability(
     """Créneaux occupés (sans données personnelles) pour construire le calendrier client."""
     query = db.query(Reservation).filter(Reservation.status != ReservationStatus.cancelled)
     if room:
-        query = query.filter(Reservation.room == room)
+        # Le calendrier d'un espace montre aussi les créneaux pris par les offres du même lieu.
+        query = query.filter(Reservation.room.in_([RoomType(r) for r in venue_rooms(room.value)]))
     return query.order_by(Reservation.event_date).all()
 
 

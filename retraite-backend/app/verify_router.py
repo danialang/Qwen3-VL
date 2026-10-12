@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 
 from .database import get_db
 from .models import Reservation, ReservationStatus
-from .receipts import ROOM_LABELS
+from .receipts import fcfa
+from .tariffs import room_label
 from .verification import is_valid_token
 
 router = APIRouter(tags=["verification"])
@@ -63,12 +64,15 @@ def verify_receipt(reservation_id: int, token: str, db: Session = Depends(get_db
 
     rows = [
         ("Réservation n°", str(r.id)),
-        ("Salle", ROOM_LABELS[r.room.value]),
+        ("Espace", room_label(r.room.value)),
         ("Date", r.event_date.strftime("%d/%m/%Y")),
         ("Horaire", f"{r.start_time.strftime('%H:%M')} - {r.end_time.strftime('%H:%M')}"),
         ("Statut", STATUS_LABELS[r.status]),
         ("Client", _mask(r.user.full_name)),
     ]
+    if not r.is_internal:
+        rows.insert(4, ("Location", fcfa(r.amount)))
+        rows.insert(5, ("Caution remboursable", fcfa(r.deposit or 0)))
     body = "<table>" + "".join(f"<tr><td>{html.escape(k)}</td><td>{html.escape(v)}</td></tr>" for k, v in rows) + "</table>"
     logger.info("Reçu n°%s vérifié : %s", r.id, title)
     return _page(title, color, body)

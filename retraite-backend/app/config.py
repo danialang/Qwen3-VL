@@ -18,7 +18,6 @@ class Settings:
     SECRET_KEY = os.getenv("SECRET_KEY", "change-me")
     ALGORITHM = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "120"))
-    RESERVATION_AMOUNT = int(os.getenv("RESERVATION_AMOUNT", "5000000"))
     RECEIPTS_DIR = os.getenv("RECEIPTS_DIR", "receipts")
     LOG_DIR = os.getenv("LOG_DIR", "logs")
 

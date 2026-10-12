@@ -5,6 +5,18 @@ import '../../core/theme.dart';
 import '../../models/reservation.dart';
 import '../booking/rules_screen.dart';
 
+const List<Room> _otherRooms = [
+  Room.salleReunionRepas,
+  Room.salleReunion,
+  Room.coursExterneGymnase,
+  Room.salleFeteCollege,
+  Room.salleReunionCollege,
+  Room.salleClasse,
+  Room.terrainMultisport,
+  Room.tatami,
+  Room.coursCollege,
+];
+
 class RoomSelectionScreen extends StatelessWidget {
   const RoomSelectionScreen({super.key});
 
@@ -14,10 +26,35 @@ class RoomSelectionScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Choisir une salle')),
       body: ListView(
         padding: const EdgeInsets.all(16),
-        children: const [
-          _RoomCard(room: Room.gymnase, equipments: kEquipmentsGymnase, icon: Icons.sports_basketball),
-          SizedBox(height: 16),
-          _RoomCard(room: Room.salleFetes, equipments: kEquipmentsSalleDesFetes, icon: Icons.celebration),
+        children: [
+          const _RoomCard(room: Room.gymnase, equipments: kEquipmentsGymnase, icon: Icons.sports_basketball),
+          const SizedBox(height: 16),
+          const _RoomCard(room: Room.salleFetes, equipments: kEquipmentsSalleDesFetes, icon: Icons.celebration),
+          const SizedBox(height: 24),
+          Text('Autres espaces et activités', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          const Text('Le prix est calculé selon votre catégorie et la durée choisie.'),
+          const SizedBox(height: 8),
+          Card(
+            margin: EdgeInsets.zero,
+            child: Column(
+              children: [
+                for (final room in _otherRooms)
+                  ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: CollegeColors.greenLight,
+                      child: Icon(room.icon, color: CollegeColors.green),
+                    ),
+                    title: Text(room.label),
+                    subtitle: Text(room.description),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => RulesScreen(room: room)),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );

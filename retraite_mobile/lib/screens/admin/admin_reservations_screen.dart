@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
 import '../../core/session.dart';
+import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../models/reservation.dart';
 import '../../services/reservation_service.dart';
@@ -73,7 +74,7 @@ class _AdminReservationsScreenState extends State<AdminReservationsScreen> with 
             title: Text('${r.room.label} — ${r.eventDate.day}/${r.eventDate.month}/${r.eventDate.year}'),
             subtitle: Text(
               '${formatTime(r.startTime)} - ${formatTime(r.endTime)}'
-              '${r.isInternal ? ' • Collège (gratuit)' : ' • ${r.amount.toStringAsFixed(0)} FCFA'}',
+              '${r.isInternal ? ' • Collège (gratuit)' : ' • ${formatFcfa(r.amount)}'}',
             ),
             trailing: StatusBadge(status: r.status),
             onTap: () async {

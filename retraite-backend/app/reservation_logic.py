@@ -1,12 +1,13 @@
+import json
 import secrets
 from datetime import timedelta
 
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
-from .config import settings
 from .models import Receipt, Reservation, ReservationStatus, RoomType, SecurityCode, User, UserRole
 from .receipts import generate_receipt_pdf
+from .tariffs import DEFAULT_CATEGORY, Quote, compute_quote, venue_rooms
 
 SUGGESTION_WINDOW_DAYS = 30
 
@@ -21,7 +22,8 @@ class ReservationConflictError(Exception):
 
 def overlap_filter(room: RoomType, event_date, start_time, end_time):
     return and_(
-        Reservation.room == room,
+        # Deux offres du même lieu (ex. gymnase et cours externes au gymnase) ne peuvent pas se chevaucher.
+        Reservation.room.in_([RoomType(r) for r in venue_rooms(room.value)]),
         Reservation.event_date == event_date,
         Reservation.status != ReservationStatus.cancelled,
         Reservation.start_time < end_time,
@@ -45,9 +47,27 @@ def generate_security_code() -> str:
     return secrets.token_hex(4).upper()
 
 
-def create_reservation(db: Session, user: User, room: RoomType, event_date, start_time, end_time) -> Reservation:
-    """Crée une réservation en appliquant la priorité du Collège (source unique de vérité,
+def quote_for(room: RoomType, category: str, start_time, end_time, extras: dict[str, int] | None = None) -> Quote:
+    """Calcule le prix d'une location d'après la grille tarifaire (lève TariffError si la demande est invalide)."""
+    return compute_quote(room.value, category, start_time, end_time, extras)
+
+
+def create_reservation(
+    db: Session,
+    user: User,
+    room: RoomType,
+    event_date,
+    start_time,
+    end_time,
+    client_category: str = DEFAULT_CATEGORY,
+    extras: dict[str, int] | None = None,
+) -> Reservation:
+    """Crée une réservation en appliquant la priorité du Collège et la grille tarifaire (source unique de vérité,
     utilisée à la fois par l'API REST et par l'assistant IA)."""
+    is_internal = user.role in (UserRole.admin, UserRole.dev)
+    # Le prix est calculé avant tout le reste : une demande invalide (catégorie, prestation...) est refusée tout de suite.
+    quote = None if is_internal else quote_for(room, client_category, start_time, end_time, extras)
+
     conflict = find_conflict(db, room, event_date, start_time, end_time)
     if conflict:
         suggestion = suggest_next_available(db, room, start_time, end_time, event_date)
@@ -57,7 +77,6 @@ def create_reservation(db: Session, user: User, room: RoomType, event_date, star
             detail += f" Prochaine date disponible : {suggestion.isoformat()}."
         raise ReservationConflictError(detail)
 
-    is_internal = user.role in (UserRole.admin, UserRole.dev)
     reservation = Reservation(
         user_id=user.id,
         room=room,
@@ -66,7 +85,11 @@ def create_reservation(db: Session, user: User, room: RoomType, event_date, star
         end_time=end_time,
         accepted_rules=True,
         is_internal=is_internal,
-        amount=0 if is_internal else settings.RESERVATION_AMOUNT,
+        amount=0 if quote is None else quote.total,
+        deposit=0 if quote is None else quote.deposit,
+        client_category=None if quote is None else quote.category,
+        duration_type=None if quote is None else quote.duration_type,
+        extras_json=None if quote is None or not quote.extras else json.dumps([vars(line) for line in quote.extras]),
         status=ReservationStatus.validated if is_internal else ReservationStatus.pending,
     )
     db.add(reservation)

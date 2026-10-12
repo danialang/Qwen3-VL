@@ -6,6 +6,7 @@ import '../../core/session.dart';
 import '../../core/theme.dart';
 import '../../models/reservation.dart';
 import '../../services/payment_service.dart';
+import '../../widgets/price_breakdown.dart';
 import '../reservations/reservation_detail_screen.dart';
 
 class PaymentScreen extends StatefulWidget {
@@ -80,11 +81,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   Text('${r.room.label} — ${r.eventDate.day}/${r.eventDate.month}/${r.eventDate.year}',
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                   Text('${formatTime(r.startTime)} - ${formatTime(r.endTime)}'),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Montant à régler : ${r.amount.toStringAsFixed(0)} FCFA',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: CollegeColors.green),
-                  ),
+                  const SizedBox(height: 12),
+                  PriceBreakdown.fromReservation(r),
                 ],
               ),
             ),
