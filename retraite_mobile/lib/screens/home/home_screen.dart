@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/session.dart';
 import '../../core/theme_provider.dart';
@@ -8,6 +9,7 @@ import '../admin/admin_dashboard_screen.dart';
 import '../assistant/chat_screen.dart';
 import '../auth/login_screen.dart';
 import '../profile/change_password_screen.dart';
+import '../profile/delete_account_screen.dart';
 import '../reservations/my_reservations_screen.dart';
 import '../rooms/room_selection_screen.dart';
 
@@ -92,6 +94,25 @@ class HomeScreen extends StatelessWidget {
             subtitle: 'Modifier le mot de passe de mon compte',
             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChangePasswordScreen())),
           ),
+          const SizedBox(height: 12),
+          _ActionCard(
+            icon: Icons.privacy_tip_outlined,
+            title: 'Politique de confidentialité',
+            subtitle: 'Comment vos données sont utilisées',
+            onTap: () => launchUrl(
+              Uri.parse('${session.api.baseUrl}/privacy'),
+              mode: LaunchMode.externalApplication,
+            ),
+          ),
+          if (user?.isAdminOrDev != true) ...[
+            const SizedBox(height: 12),
+            _ActionCard(
+              icon: Icons.delete_forever_outlined,
+              title: 'Supprimer mon compte',
+              subtitle: 'Effacer mes données personnelles',
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DeleteAccountScreen())),
+            ),
+          ],
           if (user?.isAdminOrDev == true) ...[
             const SizedBox(height: 12),
             _ActionCard(

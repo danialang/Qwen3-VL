@@ -32,6 +32,11 @@ class AuthService {
     });
   }
 
+  /// Supprime le compte du client (données personnelles effacées, réservations conservées sans nom).
+  Future<void> deleteAccount({required String password}) async {
+    await api.post('/auth/delete-account', body: {'password': password});
+  }
+
   Future<void> forgotPassword({required String email}) async {
     await api.post('/auth/forgot-password', body: {'email': email});
   }

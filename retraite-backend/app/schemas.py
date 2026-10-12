@@ -46,6 +46,10 @@ class ResetPasswordRequest(BaseModel):
     new_password: str
 
 
+class DeleteAccountRequest(BaseModel):
+    password: str
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"

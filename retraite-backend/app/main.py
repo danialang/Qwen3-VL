@@ -8,6 +8,7 @@ from .assistant.admin_router import router as assistant_admin_router
 from .assistant.client_router import router as assistant_client_router
 from .auth_router import router as auth_router
 from .database import Base, engine
+from .legal_router import router as legal_router
 from .logging_config import setup_logging
 from .migrations import ensure_schema
 from .reservations_router import router as reservations_router
@@ -42,6 +43,7 @@ app.include_router(assistant_client_router)
 app.include_router(assistant_admin_router)
 app.include_router(admin_stats_router)
 app.include_router(verify_router)
+app.include_router(legal_router)
 
 
 @app.get("/health")

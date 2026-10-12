@@ -2,7 +2,7 @@ import hashlib
 import hmac
 import logging
 import secrets
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func
@@ -11,8 +11,9 @@ from sqlalchemy.orm import Session
 from .config import settings
 from .database import get_db
 from .emailer import send_email, smtp_configured
-from .models import PasswordReset, User, UserRole
+from .models import PasswordReset, Reservation, ReservationStatus, User, UserRole
 from .schemas import (
+    DeleteAccountRequest,
     ForgotPasswordRequest,
     LoginRequest,
     PasswordChange,
@@ -170,6 +171,54 @@ def change_password(
     db.commit()
     logger.info("Mot de passe modifié : user_id=%s", current_user.id)
     return {"detail": "Mot de passe modifié."}
+
+
+@router.post("/delete-account")
+def delete_account(
+    payload: DeleteAccountRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Suppression du compte demandée par le client (obligatoire pour le Play Store et l'App Store).
+
+    Les données personnelles (nom, email, téléphone, mot de passe) sont effacées tout de suite. Les réservations et
+    les reçus restent, sans aucun nom, car ce sont des pièces comptables du Collège.
+    """
+    if current_user.role != UserRole.client:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Les comptes de l'administration ne se suppriment pas depuis l'application. Contactez le développeur.",
+        )
+    if not verify_password(payload.password, current_user.password_hash):
+        logger.warning("Suppression de compte refusée (mot de passe faux) : user_id=%s", current_user.id)
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Le mot de passe est incorrect.")
+
+    upcoming = (
+        db.query(Reservation)
+        .filter(
+            Reservation.user_id == current_user.id,
+            Reservation.event_date >= date.today(),
+            Reservation.status != ReservationStatus.cancelled,
+        )
+        .all()
+    )
+    if any(r.status == ReservationStatus.validated for r in upcoming):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Vous avez une réservation validée à venir. Annulez-la ou contactez l'administration avant de supprimer votre compte.",
+        )
+    for r in upcoming:  # réservations en attente de validation : annulées pour libérer le créneau
+        r.status = ReservationStatus.cancelled
+
+    db.query(PasswordReset).filter(PasswordReset.user_id == current_user.id).delete()
+    user_id = current_user.id
+    current_user.email = f"supprime-{user_id}@supprime.example.com"  # example.com : jamais joignable
+    current_user.full_name = "Compte supprimé"
+    current_user.phone = None
+    current_user.password_hash = hash_password(secrets.token_urlsafe(32))
+    db.commit()
+    logger.info("Compte supprimé (données personnelles effacées) : user_id=%s", user_id)
+    return {"detail": "Compte supprimé."}
 
 
 @router.get("/me", response_model=UserOut)

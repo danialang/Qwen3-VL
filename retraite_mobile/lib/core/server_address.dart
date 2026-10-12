@@ -7,6 +7,7 @@ const String _prefsKey = 'api_base_url';
 /// Adresse du serveur choisie par l'utilisateur (ex. IP du PC sur le Wi-Fi),
 /// ou l'adresse par défaut si aucune n'a été enregistrée.
 Future<String> loadServerAddress() async {
+  if (!kAllowServerEdit) return kApiBaseUrl;
   final prefs = await SharedPreferences.getInstance();
   return prefs.getString(_prefsKey) ?? kApiBaseUrl;
 }

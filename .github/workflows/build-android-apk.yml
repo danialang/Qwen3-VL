@@ -30,7 +30,10 @@ jobs:
 
       - run: flutter pub get
 
+      # Version d'ESSAI : accepte un serveur en http:// (ex. PC sur le Wi-Fi). Le Play Store utilise build-play-store.yml.
       - run: flutter build apk --release
+        env:
+          ALLOW_CLEARTEXT: "true"
 
       - uses: actions/upload-artifact@v4
         with:

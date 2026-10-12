@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
+import '../../core/constants.dart';
 import '../../core/server_address.dart';
 import '../../core/session.dart';
 import '../../services/auth_service.dart';
@@ -157,11 +158,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterScreen())),
                     child: const Text('Pas encore de compte ? Inscrivez-vous'),
                   ),
-                  TextButton.icon(
-                    onPressed: _editServerAddress,
-                    icon: const Icon(Icons.settings_ethernet),
-                    label: const Text('Adresse du serveur'),
-                  ),
+                  if (kAllowServerEdit)
+                    TextButton.icon(
+                      onPressed: _editServerAddress,
+                      icon: const Icon(Icons.settings_ethernet),
+                      label: const Text('Adresse du serveur'),
+                    ),
                 ],
               ),
             ),

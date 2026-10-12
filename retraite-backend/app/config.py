@@ -25,6 +25,8 @@ class Settings:
     DEV_PASSWORD = os.getenv("DEV_PASSWORD")
     ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "ecoretraite@gmail.com")
     ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+    # Adresse affichée dans la politique de confidentialité pour les demandes des utilisateurs.
+    CONTACT_EMAIL = os.getenv("CONTACT_EMAIL") or os.getenv("ADMIN_EMAIL", "ecoretraite@gmail.com")
 
     # Adresse publique du serveur : elle est écrite dans le QR code des reçus.
     PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://127.0.0.1:8000")

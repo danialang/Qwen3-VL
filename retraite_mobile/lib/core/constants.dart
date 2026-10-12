@@ -7,6 +7,9 @@ const String kApiBaseUrl = String.fromEnvironment(
   defaultValue: 'http://10.0.2.2:8000',
 );
 
+/// Faux dans la version du Play Store (`--dart-define=ALLOW_SERVER_EDIT=false`) : le serveur est fixé à API_BASE_URL.
+const bool kAllowServerEdit = bool.fromEnvironment('ALLOW_SERVER_EDIT', defaultValue: true);
+
 const String kAppName = 'Réservation - Collège de la Retraite';
 
 const List<String> kEquipmentsGymnase = [
