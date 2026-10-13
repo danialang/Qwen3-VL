@@ -36,6 +36,8 @@ Les écrans de Railway changent parfois un peu, mais les idées restent les mêm
 | `CONTACT_EMAIL` | l'email affiché dans la politique de confidentialité |
 | `PUBLIC_BASE_URL` | l'adresse HTTPS du serveur (à remplir à l'étape suivante) |
 | `ANTHROPIC_API_KEY` | une **nouvelle** clé (l'assistant IA ; il faut aussi des crédits chez Anthropic) |
+| `PAYMENT_INSTRUCTIONS` | (facultatif) le texte affiché au client pour payer à l'économat |
+| `BANK_TRANSFER_DETAILS` | (facultatif) banque, titulaire, numéro de compte : le virement n'est proposé que si c'est rempli |
 | `SMTP_HOST` `SMTP_PORT` `SMTP_USER` `SMTP_PASSWORD` `SMTP_FROM` | pour l'email « mot de passe oublié » (Gmail : `smtp.gmail.com`, `587`, et un **mot de passe d'application**) |
 
    Fabriquer `SECRET_KEY` : `python -c "import secrets; print(secrets.token_hex(32))"`.
@@ -124,10 +126,13 @@ Chaque exécution augmente le numéro de version automatiquement, comme le Play 
 
 ## 6. Avant la publication publique
 
-- **Paiement** : aujourd'hui le paiement est une simulation (« mode test »). Avant d'ouvrir l'application au public, il
-  faut soit brancher un vrai paiement Mobile Money, soit afficher clairement que le paiement se fait auprès de
-  l'économat. Ne pas écrire dans la fiche « paiement Mobile Money » tant qu'il n'est pas réel (Google refuse les
-  descriptions trompeuses).
+- **Paiement** : l'application propose le paiement à l'économat (et le virement si `BANK_TRANSFER_DETAILS` est
+  rempli). L'administrateur confirme le paiement en validant la réservation. Google et Apple acceptent ce
+  fonctionnement pour la location d'un lieu (service physique), sans passer par leur système de paiement.
+- **Orange Money / MTN MoMo / Access Bank** : à la réception de leurs API, écrire le code dans
+  `retraite-backend/app/payments/providers.py`, puis ajouter les variables (voir `.env.example`) sur l'hébergeur.
+  Chaque opérateur apparaît alors tout seul dans l'application. Déclarer ces opérateurs dans « Sécurité des données »
+  et ne les citer dans la fiche qu'une fois actifs.
 - Vérifier le rapport « Pre-launch » de la Play Console (plantages, accessibilité).
 - Garder à jour la politique de confidentialité si de nouvelles données sont recueillies.
 - **App Store (iPhone)** : plus tard. Il faudra un compte Apple Developer (99 $/an) et un Mac (ou un service qui construit

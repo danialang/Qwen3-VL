@@ -183,6 +183,7 @@ class Reservation {
   final String? securityCode;
   final String? paymentMethod;
   final String? paymentReference;
+  final DateTime? paidAt;
   final bool hasReceipt;
   final DateTime createdAt;
 
@@ -203,6 +204,7 @@ class Reservation {
     required this.securityCode,
     required this.paymentMethod,
     required this.paymentReference,
+    this.paidAt,
     required this.hasReceipt,
     required this.createdAt,
   });
@@ -226,11 +228,22 @@ class Reservation {
         securityCode: json['security_code'] as String?,
         paymentMethod: json['payment_method'] as String?,
         paymentReference: json['payment_reference'] as String?,
+        paidAt: json['paid_at'] != null ? DateTime.parse(json['paid_at'] as String) : null,
         hasReceipt: json['has_receipt'] as bool? ?? false,
         createdAt: DateTime.parse(json['created_at'] as String),
       );
 
-  bool get isPaid => paymentReference != null;
+  bool get isPaid => paidAt != null;
+
+  String? get paymentMethodLabel => switch (paymentMethod) {
+        null => null,
+        'economat' => 'Économat',
+        'virement' => 'Virement bancaire',
+        'orange_money' => 'Orange Money',
+        'mtn_momo' => 'MTN Mobile Money',
+        'access_bank' => 'Access Bank',
+        final other => other,
+      };
 
   /// Ce que le client verse : location + prestations + caution remboursable.
   double get totalDue => amount + deposit;

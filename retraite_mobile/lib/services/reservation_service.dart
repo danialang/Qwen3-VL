@@ -66,16 +66,14 @@ class ReservationService {
   Future<Reservation> get(int id) async =>
       Reservation.fromJson(await api.get('/reservations/$id') as Map<String, dynamic>);
 
-  Future<Reservation> validate(int id) async =>
-      Reservation.fromJson(await api.post('/reservations/$id/validate') as Map<String, dynamic>);
+  /// Valider = l'administrateur atteste avoir reçu le paiement ([reference] : n° du reçu de caisse, facultatif).
+  Future<Reservation> validate(int id, {String? reference}) async => Reservation.fromJson(await api.post(
+        '/reservations/$id/validate',
+        body: reference != null && reference.isNotEmpty ? {'reference': reference} : null,
+      ) as Map<String, dynamic>);
 
   Future<Reservation> cancel(int id) async =>
       Reservation.fromJson(await api.post('/reservations/$id/cancel') as Map<String, dynamic>);
-
-  Future<Reservation> pay(int id, {required String method, required String reference}) async {
-    final json = await api.post('/reservations/$id/pay', body: {'method': method, 'reference': reference});
-    return Reservation.fromJson(json as Map<String, dynamic>);
-  }
 
   Future<List<AvailabilitySlot>> availability({Room? room}) async {
     final json = await api.get('/reservations/availability', query: {

@@ -70,7 +70,8 @@ horaires, le statut et vos initiales).</li>
 <li>Notre <b>hébergeur</b>, qui fait fonctionner le serveur et la base de données.</li>
 <li><b>Anthropic</b> (assistant « Claude »), uniquement si vous utilisez l'assistant : les messages que vous lui écrivez lui
 sont envoyés pour qu'il puisse répondre. N'y écrivez pas d'informations sensibles.</li>
-<li>Les <b>opérateurs de paiement</b> (Orange Money, MTN Mobile Money...) lorsque le paiement réel sera activé.</li>
+<li>Les <b>opérateurs de paiement</b> (Orange Money, MTN Mobile Money, Access Bank), uniquement si vous payez en ligne
+depuis l'application. Le paiement à l'économat ou par virement ne passe par aucun opérateur.</li>
 </ul>
 <p>Nous ne vendons pas vos données et nous n'affichons aucune publicité.</p>
 

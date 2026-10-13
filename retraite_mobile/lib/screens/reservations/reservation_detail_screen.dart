@@ -49,10 +49,34 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
     }
   }
 
-  Future<void> _validate() => _run(() async {
-        final updated = await _service.validate(_reservation.id);
-        setState(() => _reservation = updated);
-      });
+  Future<void> _validate() async {
+    String? reference;
+    if (!_reservation.isInternal && !_reservation.isPaid) {
+      final controller = TextEditingController();
+      reference = await showDialog<String>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Paiement reçu ?'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text('Confirmez que le client a payé ${_reservation.totalDue.toStringAsFixed(0)} FCFA.'),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(labelText: 'N° du reçu de caisse (facultatif)'),
+            ),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Annuler')),
+            ElevatedButton(onPressed: () => Navigator.of(context).pop(controller.text.trim()), child: const Text('Paiement reçu')),
+          ],
+        ),
+      );
+      if (reference == null) return;
+    }
+    await _run(() async {
+      final updated = await _service.validate(_reservation.id, reference: reference);
+      setState(() => _reservation = updated);
+    });
+  }
 
   Future<void> _cancel() => _run(() async {
         final updated = await _service.cancel(_reservation.id);
@@ -66,6 +90,15 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
         await file.writeAsBytes(bytes);
         await OpenFilex.open(file.path);
       });
+
+  String _paymentText(Reservation r) {
+    final details = [
+      if (r.paymentMethodLabel != null) r.paymentMethodLabel!,
+      if (r.isPaid && r.paymentReference != null) 'réf. ${r.paymentReference}',
+    ].join(', ');
+    final state = r.isPaid ? 'Reçu' : 'En attente';
+    return details.isEmpty ? state : '$state ($details)';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -113,7 +146,8 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
               const SizedBox(height: 8),
             ],
             _InfoRow(label: 'Code de sécurité', value: r.securityCode ?? '—'),
-            if (r.paymentMethod != null) _InfoRow(label: 'Paiement', value: '${r.paymentMethod} (réf. ${r.paymentReference})'),
+            if (!r.isInternal)
+              _InfoRow(label: 'Paiement', value: _paymentText(r)),
             const SizedBox(height: 24),
             if (r.hasReceipt)
               ElevatedButton.icon(

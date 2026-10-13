@@ -52,13 +52,16 @@ bannière d'accueil (`assets/images/accueil.jpg`) affichent un repli visuel (dé
 icône) tant que ces fichiers ne sont pas déposés dans `assets/images/`. Aucune autre
 modification de code n'est nécessaire une fois les visuels reçus.
 
-## Paiement (mode test)
+## Paiement
 
-Aucun identifiant sandbox PaySika/PayPal n'était disponible pour ce MVP : l'écran de
-paiement simule un paiement réussi et enregistre une référence de test côté backend
-(`POST /reservations/{id}/pay`). Pour brancher la vraie passerelle : renseigner
-`PaymentService.gatewayCheckoutUrl` dans `lib/services/payment_service.dart` et adapter
-l'écran `lib/screens/booking/payment_screen.dart` pour ouvrir cette URL via `url_launcher`.
+Le serveur fournit la liste des moyens de paiement (`GET /payments/options`). Aujourd'hui :
+paiement à l'économat, et virement si `BANK_TRANSFER_DETAILS` est renseigné côté serveur. Le client
+choisit un moyen (`POST /reservations/{id}/pay`). Le paiement est confirmé uniquement par
+l'administrateur, quand il valide la réservation (« Paiement reçu »).
+
+Orange Money, MTN MoMo et Access Bank apparaîtront tout seuls dans l'écran de paiement dès qu'ils
+seront branchés côté serveur (`retraite-backend/app/payments/providers.py`). Aucun changement
+n'est nécessaire dans l'application.
 
 ## Écrans
 

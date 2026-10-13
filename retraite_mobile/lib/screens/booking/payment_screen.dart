@@ -19,38 +19,56 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen> {
   late final PaymentService _paymentService;
+  late Future<PaymentOptions> _options;
   bool _processing = false;
 
   @override
   void initState() {
     super.initState();
     _paymentService = PaymentService(context.read<SessionProvider>().api);
+    _options = _paymentService.options();
   }
 
-  Future<void> _pay(PaymentMethod method) async {
-    final confirmed = await showDialog<bool>(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text('Paiement en mode test'),
-            content: Text(
-              "Aucun véritable prélèvement n'est effectué (sandbox). "
-              'Confirmer le paiement test via ${method.label} ?',
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Annuler')),
-              ElevatedButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Confirmer')),
-            ],
-          ),
-        ) ??
-        false;
-    if (!confirmed) return;
+  Future<String?> _askPhone(String label) {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(label),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.phone,
+          decoration: const InputDecoration(labelText: 'Numéro de téléphone'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Annuler')),
+          ElevatedButton(onPressed: () => Navigator.of(context).pop(controller.text.trim()), child: const Text('Payer')),
+        ],
+      ),
+    );
+  }
 
+  Future<void> _choose(PaymentMethodOption method) async {
+    String? phone;
+    if (method.online) {
+      phone = await _askPhone(method.label);
+      if (phone == null || phone.isEmpty) return;
+    }
     setState(() => _processing = true);
     try {
-      final updated = await _paymentService.confirmTestPayment(widget.reservation.id, method);
+      final start = await _paymentService.choose(widget.reservation.id, method.key, phone: phone);
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Réservation enregistrée'),
+          content: Text(start.message),
+          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK'))],
+        ),
+      );
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => ReservationDetailScreen(reservation: updated)),
+        MaterialPageRoute(builder: (_) => ReservationDetailScreen(reservation: start.reservation)),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -87,33 +105,41 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          if (!_paymentService.isGatewayConfigured)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'Mode démonstration : la passerelle PaySika/PayPal Sandbox n\'est pas encore '
-                'configurée (identifiants à venir). Le paiement est simulé pour ce MVP.',
-                style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
-              ),
-            ),
-          const SizedBox(height: 12),
-          Text('Choisir un moyen de paiement', style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(height: 12),
-          _PaymentMethodTile(
-            icon: Icons.phone_android,
-            label: PaymentMethod.paysikaOrangeMoney.label,
-            onTap: _processing ? null : () => _pay(PaymentMethod.paysikaOrangeMoney),
-          ),
-          _PaymentMethodTile(
-            icon: Icons.phone_android,
-            label: PaymentMethod.paysikaMtnMomo.label,
-            onTap: _processing ? null : () => _pay(PaymentMethod.paysikaMtnMomo),
-          ),
-          _PaymentMethodTile(
-            icon: Icons.account_balance_wallet,
-            label: PaymentMethod.paypalSandbox.label,
-            onTap: _processing ? null : () => _pay(PaymentMethod.paypalSandbox),
+          const SizedBox(height: 20),
+          FutureBuilder<PaymentOptions>(
+            future: _options,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Column(children: [
+                  const Text('Impossible de charger les moyens de paiement.'),
+                  TextButton(
+                    onPressed: () => setState(() => _options = _paymentService.options()),
+                    child: const Text('Réessayer'),
+                  ),
+                ]);
+              }
+              final options = snapshot.data!;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Choisir un moyen de paiement', style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: 4),
+                  Text(options.instructions, style: const TextStyle(color: Colors.grey)),
+                  const SizedBox(height: 12),
+                  for (final m in options.methods)
+                    _PaymentMethodTile(
+                      icon: m.online
+                          ? Icons.phone_android
+                          : (m.key == 'virement' ? Icons.account_balance : Icons.storefront),
+                      label: m.label,
+                      onTap: _processing ? null : () => _choose(m),
+                    ),
+                ],
+              );
+            },
           ),
           if (_processing) const Padding(
             padding: EdgeInsets.only(top: 16),

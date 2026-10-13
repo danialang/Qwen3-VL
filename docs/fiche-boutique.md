@@ -16,12 +16,13 @@ Avec l'application, vous pouvez :
 • connaître le prix exact selon votre catégorie (personnel extérieur, partenaire public, partenaire privé, ONG,
   fédération sportive), la durée de la location et les prestations choisies (chaises, tables, sonorisation) ;
 • réserver sans risque de double réservation : un créneau déjà pris est refusé ;
+• régler à l'économat du Collège ou par virement, sans avance de frais dans l'application ;
 • recevoir un reçu PDF avec un code QR qui permet de vérifier son authenticité ;
 • retrouver toutes vos réservations et leur statut ;
 • poser vos questions à l'assistant intelligent du Collège ;
 • modifier votre mot de passe ou supprimer votre compte à tout moment.
 
-L'administration du Collège valide les réservations et suit les recettes depuis son propre espace.
+L'administration du Collège confirme les paiements, valide les réservations et suit les recettes depuis son propre espace.
 
 Vos données restent protégées : mots de passe chiffrés, échanges sécurisés (HTTPS), aucune publicité.
 

@@ -142,19 +142,31 @@ class AvailabilityOut(BaseModel):
     status: ReservationStatus
 
 
-PAYMENT_METHODS = ("paysika_orange_money", "paysika_mtn_momo", "paypal_sandbox")
-
-
 class PaymentCreate(BaseModel):
     method: str
-    reference: str
+    phone: str | None = None  # numéro Mobile Money, pour les paiements en ligne
 
-    @field_validator("method")
-    @classmethod
-    def check_method(cls, v):
-        if v not in PAYMENT_METHODS:
-            raise ValueError(f"Méthode de paiement invalide. Attendu : {', '.join(PAYMENT_METHODS)}.")
-        return v
+
+class PaymentStartOut(BaseModel):
+    reservation: ReservationOut
+    checkout_url: str | None = None
+    message: str
+
+
+class PaymentMethodOut(BaseModel):
+    key: str
+    label: str
+    online: bool
+
+
+class PaymentOptionsOut(BaseModel):
+    methods: list[PaymentMethodOut]
+    instructions: str
+    bank_details: str
+
+
+class ValidateIn(BaseModel):
+    reference: str | None = None  # ex. numéro du reçu de caisse de l'économat
 
 
 class AdminOverviewOut(BaseModel):

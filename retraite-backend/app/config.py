@@ -43,6 +43,15 @@ class Settings:
     # DÉVELOPPEMENT UNIQUEMENT : écrit le code dans les logs du serveur quand aucun email ne peut partir.
     RESET_CODE_IN_LOGS = os.getenv("RESET_CODE_IN_LOGS", "false").lower() == "true"
 
+    # Paiement hors ligne : texte affiché au client après sa réservation.
+    PAYMENT_INSTRUCTIONS = os.getenv(
+        "PAYMENT_INSTRUCTIONS",
+        "Réglez le montant à l'économat du Collège (du lundi au vendredi). "
+        "Votre réservation sera validée et votre reçu disponible dès réception du paiement.",
+    )
+    # Coordonnées bancaires pour le virement (vide = virement non proposé).
+    BANK_TRANSFER_DETAILS = os.getenv("BANK_TRANSFER_DETAILS", "")
+
     ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
     ASSISTANT_MODEL = os.getenv("ASSISTANT_MODEL", "claude-sonnet-5-5")
 

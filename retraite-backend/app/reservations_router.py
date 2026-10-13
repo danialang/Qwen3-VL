@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
+from .config import settings
 from .database import get_db
 from .models import Receipt, Reservation, ReservationStatus, RoomType, User, UserRole
 from .receipts import generate_receipt_pdf
@@ -15,7 +16,19 @@ from .reservation_logic import (
     create_reservation as create_reservation_record,
     quote_for,
 )
-from .schemas import AvailabilityOut, PaymentCreate, QuoteLineOut, QuoteOut, QuoteRequest, ReservationCreate, ReservationOut
+from .payments import OFFLINE_METHODS, PaymentProviderError, get_provider
+from .payments_router import offered_methods
+from .schemas import (
+    AvailabilityOut,
+    PaymentCreate,
+    PaymentStartOut,
+    QuoteLineOut,
+    QuoteOut,
+    QuoteRequest,
+    ReservationCreate,
+    ReservationOut,
+    ValidateIn,
+)
 from .tariffs import DURATION_LABELS, TariffError, category_label, venue_rooms
 from .security import get_current_user, require_roles
 
@@ -153,31 +166,52 @@ def get_reservation(reservation_id: int, db: Session = Depends(get_db), current_
     return _to_out(_get_owned_reservation(db, reservation_id, current_user))
 
 
-@router.post("/{reservation_id}/pay", response_model=ReservationOut)
+@router.post("/{reservation_id}/pay", response_model=PaymentStartOut)
 def pay_reservation(
     reservation_id: int,
     payload: PaymentCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Le client choisit son moyen de paiement. La réservation n'est marquée payée que par
+    l'administrateur (hors ligne) ou par la confirmation de l'opérateur (webhook), jamais par le client."""
     r = _get_owned_reservation(db, reservation_id, current_user)
     if r.is_internal:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Réservation interne au Collège : aucun paiement requis.")
     if r.status == ReservationStatus.cancelled:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Réservation annulée.")
+    if r.paid_at:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Cette réservation est déjà payée.")
+    if payload.method not in {m["key"] for m in offered_methods()}:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Moyen de paiement indisponible.")
+
+    checkout_url = None
+    if payload.method in OFFLINE_METHODS:
+        message = settings.PAYMENT_INSTRUCTIONS
+        if payload.method == "virement":
+            message = f"Effectuez le virement sur le compte suivant :\n{settings.BANK_TRANSFER_DETAILS}\n" \
+                      f"Indiquez la référence RES-{r.id} dans le libellé."
+        r.payment_reference = None
+    else:
+        try:
+            start = get_provider(payload.method).start_payment(r, int(r.amount + (r.deposit or 0)), payload.phone)
+        except PaymentProviderError as e:
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(e))
+        r.payment_reference = start.transaction_id
+        checkout_url = start.checkout_url
+        message = start.message or "Validez le paiement sur votre téléphone."
 
     r.payment_method = payload.method
-    r.payment_reference = payload.reference
-    r.paid_at = datetime.utcnow()
     db.commit()
     db.refresh(r)
-    logger.info("Paiement test enregistré pour réservation #%s méthode=%s", r.id, payload.method)
-    return _to_out(r)
+    logger.info("Réservation #%s : moyen de paiement choisi = %s", r.id, payload.method)
+    return PaymentStartOut(reservation=_to_out(r), checkout_url=checkout_url, message=message)
 
 
 @router.post("/{reservation_id}/validate", response_model=ReservationOut)
 def validate_reservation(
     reservation_id: int,
+    payload: ValidateIn | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.admin, UserRole.dev)),
 ):
@@ -187,6 +221,12 @@ def validate_reservation(
     if r.status == ReservationStatus.cancelled:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Réservation annulée, validation impossible.")
 
+    # Valider = l'administrateur atteste avoir reçu le paiement (économat ou virement).
+    if not r.is_internal and not r.paid_at:
+        r.paid_at = datetime.utcnow()
+        r.payment_method = r.payment_method or "economat"
+        if payload and payload.reference:
+            r.payment_reference = payload.reference.strip()[:255]
     r.status = ReservationStatus.validated
     db.commit()
 
