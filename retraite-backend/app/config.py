@@ -13,9 +13,13 @@ def _database_url() -> str:
     return url
 
 
+DEFAULT_SECRET_KEY = "change-me"
+
+
 class Settings:
+    APP_ENV = os.getenv("APP_ENV", "development").lower()
     DATABASE_URL = _database_url()
-    SECRET_KEY = os.getenv("SECRET_KEY", "change-me")
+    SECRET_KEY = os.getenv("SECRET_KEY", DEFAULT_SECRET_KEY)
     ALGORITHM = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "120"))
     RECEIPTS_DIR = os.getenv("RECEIPTS_DIR", "receipts")
@@ -57,3 +61,7 @@ class Settings:
 
 
 settings = Settings()
+
+# En ligne, une clé par défaut permettrait à n'importe qui de forger un jeton admin : on refuse de démarrer.
+if settings.APP_ENV == "production" and settings.SECRET_KEY in (DEFAULT_SECRET_KEY, "change-me-to-a-random-secret", ""):
+    raise RuntimeError("SECRET_KEY doit être défini (valeur aléatoire) quand APP_ENV=production.")

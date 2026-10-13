@@ -12,11 +12,16 @@ def setup_logging() -> None:
     global _configured
     if _configured:
         return
-    os.makedirs(settings.LOG_DIR, exist_ok=True)
+    handlers = [logging.StreamHandler()]
+    try:
+        os.makedirs(settings.LOG_DIR, exist_ok=True)
+        handlers.append(logging.FileHandler(LOG_FILE, encoding="utf-8"))
+    except OSError:
+        pass  # disque en lecture seule chez l'hébergeur : les logs restent dans la console
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        handlers=[logging.FileHandler(LOG_FILE, encoding="utf-8"), logging.StreamHandler()],
+        handlers=handlers,
     )
     _configured = True
 
